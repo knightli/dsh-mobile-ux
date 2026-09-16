@@ -29,6 +29,10 @@ npm test
 
 `npm test` 会先构建，然后执行 CSS 契约、通用 web-profile artifact 契约、profile 持久化以及 `client.js` 的真实模块注册/执行测试。
 
+## 交互原型归档
+
+独立的鲸鱼上拉刷新交互 demo 保存在 [docs/prototypes/whale-refresh-demo.html](docs/prototypes/whale-refresh-demo.html)。它只用于观察页面位移、喷水动画和提示文字的时序，不属于插件运行时，也不会随安装器自动启用。
+
 ## 从 checkout 或 Git 依赖使用
 
 `dist/` 是可运行的发布产物，已随仓库保留；但从 checkout 使用前仍应显式执行：

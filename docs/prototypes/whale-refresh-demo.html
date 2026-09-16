@@ -1,0 +1,509 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Whale pull-to-refresh prototype</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #090b10;
+      color: #e7edf7;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100svh;
+      display: grid;
+      place-items: center;
+      padding: 16px;
+      background: #090b10;
+    }
+
+    .shell {
+      width: min(420px, 100%);
+      display: grid;
+      gap: 12px;
+    }
+
+    header, .state, .controls {
+      border: 1px solid #263043;
+      border-radius: 16px;
+      background: #11151e;
+    }
+
+    header { padding: 14px 16px; }
+    h1 { margin: 0; font-size: 16px; font-weight: 650; }
+    header p { margin: 5px 0 0; color: #96a4ba; font-size: 12px; line-height: 1.5; }
+
+    .preview {
+      position: relative;
+      height: min(620px, 70svh);
+      min-height: 360px;
+      overflow: hidden;
+      border: 1px solid #263043;
+      border-radius: 24px;
+      background: #0d1119;
+      box-shadow: 0 16px 44px #0006;
+      touch-action: none;
+      user-select: none;
+      --composer-block: 72px;
+      --long-content-height: 1400px;
+      --surface-height: 28px;
+    }
+
+    .page-track {
+      position: absolute;
+      inset: 0 auto auto 0;
+      width: 100%;
+      height: calc(var(--long-content-height) + var(--composer-block));
+      display: flex;
+      flex-direction: column;
+      transform: translate3d(0, calc(var(--base-page-offset, 0px) + var(--page-offset, 0px)), 0);
+      will-change: transform;
+    }
+
+    .fake-content {
+      flex: 0 0 var(--long-content-height);
+      min-height: 0;
+      padding: 24px 18px 20px;
+      color: #78869c;
+      font-size: 12px;
+      line-height: 1.7;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+    }
+
+    .fake-content::before {
+      content: "会话内容区域";
+      display: block;
+      color: #d5deed;
+      font-size: 14px;
+      margin-bottom: 14px;
+    }
+
+    .fake-line {
+      height: 8px;
+      margin: 12px 0;
+      border-radius: 99px;
+      background: #202a3a;
+    }
+
+    .fake-line.short { width: 58%; }
+    .fake-line.medium { width: 76%; }
+
+    .drag-hint {
+      position: absolute;
+      inset-inline: 0;
+      inset-block-start: 5px;
+      z-index: 3;
+      text-align: center;
+      color: #8291a8;
+      font-size: 12px;
+      pointer-events: none;
+      opacity: 0;
+      transform-origin: center center;
+      transition: opacity 140ms ease-out;
+    }
+
+    .drag-hint strong { color: #c5d5ef; }
+
+    .refresh-stage {
+      position: absolute;
+      inset-inline: 0;
+      inset-block-end: 0;
+      height: 126px;
+      /* The prompt may travel above the stage after 138%; the preview itself
+         remains the clipping boundary. */
+      overflow: visible;
+      pointer-events: none;
+    }
+
+    .refresh-stage.surface-visible .drag-hint { opacity: 1; }
+
+    .whale-layer {
+      position: absolute;
+      inset-inline: 0;
+      inset-block-end: 0;
+      height: 126px;
+      display: grid;
+      place-items: end center;
+      pointer-events: none;
+    }
+
+    #whale-svg {
+      width: min(270px, 78vw);
+      height: 126px;
+      overflow: visible;
+    }
+
+    .refresh-stage:not(.whale-visible) #whale-svg { opacity: 0; }
+
+    .sea {
+      position: absolute;
+      inset-inline: 0;
+      inset-block-end: 0;
+      z-index: 2;
+      height: var(--surface-height);
+      background: #56cde2;
+      transform: translateY(var(--sea-offset, 100%));
+      overflow: hidden;
+    }
+
+    .refresh-stage.surface-visible .sea { transform: translateY(var(--sea-offset, 0%)); }
+
+    .sea::before {
+      display: none;
+    }
+
+    .sea-wave {
+      position: absolute;
+      inset-inline: 0;
+      inset-block-start: -1px;
+      width: 100%;
+      height: 10px;
+      overflow: visible;
+    }
+
+    .composer {
+      position: relative;
+      flex: 0 0 58px;
+      height: 58px;
+      margin: 0 14px 14px;
+      border-radius: 18px;
+      background: #202530;
+      border: 1px solid #30394a;
+      color: #7e8ba0;
+      display: grid;
+      place-items: center start;
+      padding-inline: 16px;
+      font-size: 13px;
+      pointer-events: none;
+    }
+
+    .state { padding: 10px 12px; display: grid; gap: 5px; font-size: 12px; }
+    .state-row { display: flex; justify-content: space-between; gap: 16px; color: #9aa8bd; }
+    .state-row strong { color: #e7edf7; font-variant-numeric: tabular-nums; }
+
+    .controls { padding: 10px 12px; display: grid; gap: 9px; }
+    .controls-row { display: flex; gap: 8px; }
+    button {
+      border: 1px solid #354158;
+      border-radius: 10px;
+      padding: 8px 10px;
+      color: #dce7f8;
+      background: #182031;
+      cursor: pointer;
+    }
+    button:hover { background: #22304a; }
+    input[type="range"] { width: 100%; accent-color: #3b9dff; }
+    .footnote { color: #718096; font-size: 11px; line-height: 1.5; }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header>
+      <h1>Whale pull-to-refresh prototype</h1>
+      <p>预览的是已经滚到最底部的长页面；继续上拉时，长页面和 composer 一起上移。</p>
+    </header>
+
+    <section class="preview" id="preview" aria-label="鲸鱼上拉刷新动画预览">
+      <div class="page-track" id="page-track">
+        <div class="fake-content">
+          <div class="fake-line medium"></div>
+          <div class="fake-line"></div>
+          <div class="fake-line short"></div>
+          <div class="fake-line medium"></div>
+          <div class="fake-line"></div>
+          <div class="fake-line short"></div>
+        </div>
+        <div class="composer">composer 占位区域</div>
+      </div>
+
+      <div class="refresh-stage" id="refresh-stage">
+        <div class="drag-hint"><strong id="prompt">上拉试试</strong></div>
+        <div class="whale-layer">
+          <svg id="whale-svg" viewBox="0 0 240 126" role="img" aria-label="蓝色卡通鲸鱼">
+            <defs>
+              <clipPath id="above-water">
+                <rect x="0" y="0" width="240" height="92"></rect>
+              </clipPath>
+            </defs>
+
+            <g id="whale" clip-path="url(#above-water)">
+            <g id="spout" opacity="0" fill="none" stroke="#54b9ff" stroke-linecap="round" stroke-linejoin="round">
+              <path id="spout-center-drop" d="M0 -10 C-7 -5 -6 5 0 10 C6 5 7 -5 0 -10Z" fill="#54b9ff"></path>
+              <path id="spout-left-drop" d="M0 -10 C-7 -5 -6 5 0 10 C6 5 7 -5 0 -10Z" fill="#54b9ff"></path>
+              <path id="spout-right-drop" d="M0 -10 C-7 -5 -6 5 0 10 C6 5 7 -5 0 -10Z" fill="#54b9ff"></path>
+              <path id="spout-main" d="M120 45 C118 38 118 30 120 24" stroke-width="7" opacity="0"></path>
+              <path id="spout-upper-left" d="M120 25 C116 18 108 18 102 25" stroke-width="3.5" opacity="0"></path>
+              <path id="spout-upper-right" d="M120 25 C124 18 132 18 138 25" stroke-width="3.5" opacity="0"></path>
+              <path id="spout-lower-left" d="M120 33 C112 23 100 25 92 35 C88 40 88 46 88 52" stroke-width="3.5" opacity="0"></path>
+              <path id="spout-lower-right" d="M120 33 C128 23 140 25 148 35 C152 40 152 46 152 52" stroke-width="3.5" opacity="0"></path>
+            </g>
+              <path d="M69 98 C69 64 93 38 120 38 C145 38 163 55 170 79 C180 75 187 66 196 65 C192 73 198 79 209 77 C202 88 186 93 170 87 C168 94 169 98 171 101 C145 107 97 107 69 98Z" fill="#2293e6" stroke="#0e4d8a" stroke-width="3"></path>
+              <ellipse cx="120" cy="46" rx="6" ry="3" fill="#0e4d8a"></ellipse>
+
+              <g id="eyes-closed" fill="none" stroke="#0e4d8a" stroke-width="3" stroke-linecap="round">
+                <path d="M94 66 Q103 73 112 66"></path>
+                <path d="M128 66 Q137 73 146 66"></path>
+              </g>
+              <g id="eyes-half" opacity="0">
+                <path d="M94 67 Q103 63 112 67 L112 71 L94 71Z" fill="#fff"></path>
+                <path d="M128 67 Q137 63 146 67 L146 71 L128 71Z" fill="#fff"></path>
+                <circle cx="103" cy="68" r="4" fill="#0e4d8a"></circle>
+                <circle cx="137" cy="68" r="4" fill="#0e4d8a"></circle>
+              </g>
+              <g id="eyes-open" opacity="0">
+                <circle cx="103" cy="67" r="9" fill="#fff"></circle>
+                <circle cx="137" cy="67" r="9" fill="#fff"></circle>
+                <circle cx="103" cy="67" r="4" fill="#0e4d8a"></circle>
+                <circle cx="137" cy="67" r="4" fill="#0e4d8a"></circle>
+              </g>
+            </g>
+          </svg>
+        </div>
+        <div class="sea" aria-hidden="true">
+          <svg class="sea-wave" viewBox="0 0 240 10" preserveAspectRatio="none" aria-hidden="true">
+            <path d="M0 5 C15 0 25 0 40 5 S65 10 80 5 S105 0 120 5 S145 10 160 5 S185 0 200 5 S225 10 240 5" fill="none" stroke="#9bf3fb" stroke-width="3" stroke-linecap="round"></path>
+          </svg>
+        </div>
+      </div>
+    </section>
+
+    <section class="state" aria-live="polite">
+      <div class="state-row"><span>状态</span><strong id="state">初始</strong></div>
+      <div class="state-row"><span>总上拉距离</span><strong id="distance">0px</strong></div>
+      <div class="state-row"><span>页面上移</span><strong id="offset">0px</strong></div>
+      <div class="state-row"><span>海平面</span><strong id="surface">隐藏</strong></div>
+      <div class="state-row"><span>喷泉展开</span><strong id="fountain">0%</strong></div>
+      <div class="state-row"><span>动画进度</span><strong id="progress">0%</strong></div>
+      <div class="state-row"><span>刷新次数</span><strong id="refreshes">0</strong></div>
+    </section>
+
+    <section class="controls">
+      <input id="slider" type="range" min="0" max="8" step="0.01" value="0" aria-label="动画进度">
+      <div class="controls-row">
+        <button id="step-down" type="button">回拖</button>
+        <button id="step-up" type="button">继续上拉</button>
+        <button id="reset" type="button">重置</button>
+      </div>
+      <div class="footnote">直接用鼠标或手指拖动预览区域。超过最终帧后，长页面和 composer 会按实际拖动距离继续上移，水花层保持位置，并让中央与两侧水柱一起在 94%～100% 的末段往返；138% 后提示文字上移并逐渐放大，200% 后继续上移并淡出。滑块最多显示 800%，拖动本身不设上限。松手只在 demo 中记录一次刷新，不会真的刷新页面。</div>
+    </section>
+  </main>
+
+  <script>
+    const preview = document.querySelector('#preview');
+    const pageTrack = document.querySelector('#page-track');
+    const refreshStage = document.querySelector('#refresh-stage');
+    const whale = document.querySelector('#whale');
+    const eyesClosed = document.querySelector('#eyes-closed');
+    const eyesHalf = document.querySelector('#eyes-half');
+    const eyesOpen = document.querySelector('#eyes-open');
+    const spout = document.querySelector('#spout');
+    const spoutMain = document.querySelector('#spout-main');
+    const spoutUpperLeft = document.querySelector('#spout-upper-left');
+    const spoutUpperRight = document.querySelector('#spout-upper-right');
+    const spoutLowerLeft = document.querySelector('#spout-lower-left');
+    const spoutLowerRight = document.querySelector('#spout-lower-right');
+    const spoutCenterDrop = document.querySelector('#spout-center-drop');
+    const spoutLeftDrop = document.querySelector('#spout-left-drop');
+    const spoutRightDrop = document.querySelector('#spout-right-drop');
+    const dragHint = document.querySelector('.drag-hint');
+    const prompt = document.querySelector('#prompt');
+    const slider = document.querySelector('#slider');
+    const stateText = document.querySelector('#state');
+    const distanceText = document.querySelector('#distance');
+    const offsetText = document.querySelector('#offset');
+    const surfaceText = document.querySelector('#surface');
+    const fountainText = document.querySelector('#fountain');
+    const progressText = document.querySelector('#progress');
+    const refreshesText = document.querySelector('#refreshes');
+    const threshold = 108;
+    const finalProgress = 1.6;
+    const sliderMaxProgress = Number(slider.max);
+    const surfaceReveal = 30;
+    const surfaceStart = surfaceReveal / threshold;
+    const promptLiftStart = 1.38;
+    const promptFadeStart = 2;
+    const promptFadeDuration = 0.8;
+    const promptLiftRate = 70;
+    const state = { progress: 0, startY: null, startProgress: 0, dragging: false, direction: 0, refreshes: 0 };
+
+    const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+
+    function render() {
+      const p = state.progress;
+      const isReversing = state.direction < 0;
+      const pageOffset = p * threshold;
+      const surfaceProgress = clamp(p / surfaceStart, 0, 1);
+      const whaleProgress = clamp((p - surfaceStart) / (1 - surfaceStart), 0, 1);
+      const fountainProgress = clamp((p - 1) / (finalProgress - 1), 0, 1);
+      const overdrag = Math.max(0, p - finalProgress);
+      const finalFrameProgress = p > finalProgress
+        ? 0.97 + 0.03 * Math.cos(overdrag * Math.PI * 2 / 0.22)
+        : fountainProgress;
+      // Once the pull passes the final frame, replay the complete 94%–100%
+      // fountain segment. Every fountain element must use this same progress
+      // value; otherwise only the center jet moves while the side streams
+      // remain frozen at 100%.
+      const fountainFrameProgress = p > finalProgress ? finalFrameProgress : fountainProgress;
+      const y = 62 - whaleProgress * 50;
+      const eyeScale = 0.62 + whaleProgress * 0.38;
+      const eyeTransform = `translate(120 68) scale(${eyeScale}) translate(-120 -68)`;
+      const arcProgress = clamp((fountainFrameProgress - 0.72) / 0.28, 0, 1);
+      const launchProgress = clamp(fountainFrameProgress / 0.9, 0, 1);
+      const riseProgress = clamp(fountainFrameProgress / 0.3, 0, 1);
+      const fallingDropFade = clamp((launchProgress - 0.68) / 0.32, 0, 1);
+      const jetRiseProgress = fountainFrameProgress < 0.72
+        ? fountainFrameProgress / 0.72
+        : 1;
+      const mainTop = p > finalProgress
+        ? 8 + (1 - finalFrameProgress) * 70
+        : 28 - jetRiseProgress * 20;
+      const splashJetProgress = clamp(fountainFrameProgress / 0.72, 0, 1);
+      const splashTop = 28 - splashJetProgress * 20;
+      const dropY = 43 - 100 * launchProgress + 132 * launchProgress * launchProgress;
+      const dropSpread = 3 + launchProgress * 42;
+      const centerDropY = 43 - riseProgress * 21;
+      const velocityY = -100 + 264 * launchProgress;
+      const leftVelocityAngle = Math.atan2(velocityY, -42) * 180 / Math.PI;
+      const rightVelocityAngle = Math.atan2(velocityY, 42) * 180 / Math.PI;
+      const upperSpan = 4 + arcProgress * 22;
+      const upperPeakY = splashTop - arcProgress * 9;
+      const upperLeftPath = `M120 ${splashTop + 2} C${120 - upperSpan * 0.2} ${upperPeakY} ${120 - upperSpan * 0.8} ${upperPeakY} ${120 - upperSpan} ${splashTop + 2}`;
+      const upperRightPath = `M120 ${splashTop + 2} C${120 + upperSpan * 0.2} ${upperPeakY} ${120 + upperSpan * 0.8} ${upperPeakY} ${120 + upperSpan} ${splashTop + 2}`;
+      const lowerStartY = splashTop + 21;
+      const lowerSpan = 8 + arcProgress * 29;
+      const lowerEndY = lowerStartY + 21 + arcProgress * 18;
+      const lowerPeakY = lowerStartY - arcProgress * 10;
+      const lowerLeftPath = `M120 ${lowerStartY} C${120 - lowerSpan * 0.25} ${lowerPeakY} ${120 - lowerSpan * 0.78} ${lowerPeakY} ${120 - lowerSpan} ${lowerEndY} C${120 - lowerSpan - 2} ${lowerEndY + 5} ${120 - lowerSpan - 1} ${lowerEndY + 8} ${120 - lowerSpan} ${lowerEndY + 12}`;
+      const lowerRightPath = `M120 ${lowerStartY} C${120 + lowerSpan * 0.25} ${lowerPeakY} ${120 + lowerSpan * 0.78} ${lowerPeakY} ${120 + lowerSpan} ${lowerEndY} C${120 + lowerSpan + 2} ${lowerEndY + 5} ${120 + lowerSpan + 1} ${lowerEndY + 8} ${120 + lowerSpan} ${lowerEndY + 12}`;
+
+      pageTrack.style.setProperty('--page-offset', `${-pageOffset}px`);
+      refreshStage.style.setProperty('--sea-offset', `${100 - surfaceProgress * 100}%`);
+      refreshStage.classList.toggle('surface-visible', p > 0);
+      refreshStage.classList.toggle('whale-visible', p >= surfaceStart);
+      whale.setAttribute('transform', `translate(0 ${y})`);
+      eyesClosed.setAttribute('transform', eyeTransform);
+      eyesHalf.setAttribute('transform', eyeTransform);
+      eyesOpen.setAttribute('transform', eyeTransform);
+      spoutMain.setAttribute('d', `M120 45 C118 38 118 ${mainTop + 8} 120 ${mainTop}`);
+      spoutMain.setAttribute('stroke-width', `${4 + jetRiseProgress * 5}`);
+      spoutMain.style.opacity = String(clamp(fountainFrameProgress / 0.28, 0, 1));
+      spoutUpperLeft.setAttribute('d', upperLeftPath);
+      spoutUpperRight.setAttribute('d', upperRightPath);
+      spoutLowerLeft.setAttribute('d', lowerLeftPath);
+      spoutLowerRight.setAttribute('d', lowerRightPath);
+      spoutUpperLeft.style.opacity = String(arcProgress);
+      spoutUpperRight.style.opacity = String(arcProgress);
+      spoutLowerLeft.style.opacity = String(arcProgress);
+      spoutLowerRight.style.opacity = String(arcProgress);
+      spoutCenterDrop.setAttribute('transform', `translate(120 ${centerDropY})`);
+      const centerDropOpacity = 1 - clamp((fountainFrameProgress - 0.25) / 0.5, 0, 1);
+      spoutCenterDrop.style.opacity = isReversing ? '0' : String(centerDropOpacity);
+      spoutLeftDrop.setAttribute('transform', `translate(${120 - dropSpread} ${dropY}) rotate(${leftVelocityAngle + 90})`);
+      spoutRightDrop.setAttribute('transform', `translate(${120 + dropSpread} ${dropY}) rotate(${rightVelocityAngle + 90})`);
+      const sideDropOpacity = 1 - fallingDropFade;
+      spoutLeftDrop.style.opacity = isReversing ? '0' : String(sideDropOpacity);
+      spoutRightDrop.style.opacity = isReversing ? '0' : String(sideDropOpacity);
+      eyesClosed.style.opacity = whaleProgress < 0.28 ? '1' : '0';
+      eyesHalf.style.opacity = whaleProgress >= 0.28 && whaleProgress < 0.58 ? '1' : '0';
+      eyesOpen.style.opacity = whaleProgress >= 0.58 ? '1' : '0';
+      spout.style.opacity = p >= 1 ? '1' : '0';
+      const promptLift = Math.max(0, p - promptLiftStart) * promptLiftRate;
+      const promptOpacity = 1 - clamp((p - promptFadeStart) / promptFadeDuration, 0, 1);
+      const promptScale = 1 + clamp(
+        (p - promptLiftStart) / (promptFadeStart + promptFadeDuration - promptLiftStart),
+        0,
+        1,
+      ) * 0.35;
+      dragHint.style.transform = `translateY(${-promptLift}px) scale(${promptScale})`;
+      dragHint.style.opacity = isReversing || p <= 0 ? '0' : String(promptOpacity);
+      prompt.textContent = isReversing
+        ? ''
+        : p >= 1 ? '喷水中，松手刷新' : p >= surfaceStart ? '继续上拉' : '上拉试试';
+      const visibleFountainPercent = Math.round(finalFrameProgress * 100);
+      stateText.textContent = p >= 1
+        ? `喷水中 ${visibleFountainPercent}%`
+        : state.dragging
+          ? p >= surfaceStart ? '鲸鱼上浮中' : '页面上移中'
+          : p > 0 ? '已回拖' : '初始';
+      distanceText.textContent = `${Math.round(p * threshold)}px`;
+      offsetText.textContent = `${Math.round(pageOffset)}px`;
+      surfaceText.textContent = p >= surfaceStart
+        ? '已出现，高度固定'
+        : p > 0 ? `上升 ${Math.round(surfaceProgress * 100)}%` : '隐藏';
+      fountainText.textContent = `${visibleFountainPercent}%`;
+      progressText.textContent = `${Math.round(p * 100)}%`;
+      refreshesText.textContent = String(state.refreshes);
+      slider.value = String(clamp(p, 0, sliderMaxProgress));
+    }
+
+    function setProgress(progress) {
+      // The slider has a finite display range, but a real drag must keep
+      // moving the page after the fountain reaches its final frame.
+      const nextProgress = Math.max(0, progress);
+      state.direction = nextProgress < state.progress ? -1 : nextProgress > state.progress ? 1 : state.direction;
+      state.progress = nextProgress;
+      render();
+    }
+
+    function syncPageBase() {
+      const baseOffset = preview.clientHeight - pageTrack.offsetHeight;
+      pageTrack.style.setProperty('--base-page-offset', `${baseOffset}px`);
+      render();
+    }
+
+    preview.addEventListener('pointerdown', (event) => {
+      state.startY = event.clientY;
+      state.startProgress = state.progress;
+      state.dragging = true;
+      state.direction = 0;
+      preview.setPointerCapture?.(event.pointerId);
+      render();
+    });
+
+    preview.addEventListener('pointermove', (event) => {
+      if (!state.dragging || state.startY === null) return;
+      const nextProgress = state.startProgress + (state.startY - event.clientY) / threshold;
+      setProgress(nextProgress);
+    });
+
+    function release() {
+      if (!state.dragging) return;
+      state.dragging = false;
+      state.direction = 0;
+      if (state.progress >= 1) {
+        state.refreshes += 1;
+        render();
+      } else {
+        render();
+      }
+      state.startY = null;
+      state.startProgress = state.progress;
+    }
+
+    preview.addEventListener('pointerup', release);
+    preview.addEventListener('pointercancel', release);
+    document.querySelector('#step-up').addEventListener('click', () => setProgress(state.progress + 0.12));
+    document.querySelector('#step-down').addEventListener('click', () => setProgress(state.progress - 0.12));
+    document.querySelector('#reset').addEventListener('click', () => {
+      state.progress = 0;
+      state.startY = null;
+      state.startProgress = 0;
+      state.dragging = false;
+      state.direction = 0;
+      render();
+    });
+    slider.addEventListener('input', () => setProgress(Number(slider.value)));
+    window.addEventListener('resize', syncPageBase);
+    syncPageBase();
+  </script>
+</body>
+</html>
