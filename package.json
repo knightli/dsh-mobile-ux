@@ -1,6 +1,6 @@
 {
   "name": "dsh-mobile-ux",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "CSS-first mobile shell adaptation for DeepSeek Harness web profiles.",
   "license": "MIT",
   "type": "module",
@@ -13,7 +13,7 @@
     "./styles/mobile.css": "./styles/mobile.css"
   },
   "bin": {
-    "dsh-mobile-ux": "./bin/dsh-mobile-ux.mjs"
+    "dsh-mobile-ux": "bin/dsh-mobile-ux.mjs"
   },
   "files": [
     "bin/",
