@@ -6,6 +6,9 @@ const css = await readFile(new URL('../styles/mobile.css', import.meta.url), 'ut
 
 test('mobile CSS keeps desktop outside the narrow media query and uses semantic hooks', () => {
   assert.match(css, /@media \(max-width: 1023px\)/);
+  assert.match(css, /--dsh-mobile-sidebar-width: min\(280px, calc\(100vw - 16px\)\)/);
+  assert.match(css, /width: var\(--dsh-mobile-sidebar-width\) !important/);
+  assert.match(css, /inset-inline-start: var\(--dsh-mobile-sidebar-width\)/);
   assert.match(css, /grid-template-columns: 0 minmax\(0, 1fr\) 0/);
   assert.match(css, /\[class\$="_frame"\]/);
   assert.match(css, /\[class\$="_sidebarCol"\]/);

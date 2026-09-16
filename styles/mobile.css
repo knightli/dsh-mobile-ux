@@ -12,6 +12,7 @@
 
 @media (max-width: 1023px) {
   [class$="_frame"] {
+    --dsh-mobile-sidebar-width: min(280px, calc(100vw - 16px));
     grid-template-columns: 0 minmax(0, 1fr) 0 !important;
   }
 
@@ -32,7 +33,7 @@
     z-index: 40;
     inset-block: 0;
     inset-inline-start: 0;
-    width: min(86vw, 420px) !important;
+    width: var(--dsh-mobile-sidebar-width) !important;
     overflow: visible;
     box-shadow: 12px 0 32px rgb(15 23 42 / 18%);
   }
@@ -53,7 +54,7 @@
     position: absolute;
     z-index: 35;
     inset: 0;
-    inset-inline-start: min(86vw, 420px);
+    inset-inline-start: var(--dsh-mobile-sidebar-width);
     background: rgb(15 23 42 / 12%);
     pointer-events: none;
   }
