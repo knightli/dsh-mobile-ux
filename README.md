@@ -60,7 +60,7 @@ home-level patch 是持久边界：部分 launcher 会刷新 `profiles/<profile>
 
 1. 1280px 左右桌面视口与安装前布局一致。
 2. 390px 和 768px 视口下，中间内容占满，sidebar 打开时覆盖内容而不挤压主列。
-3. sidebar 折叠态显示 56px 入口，展开态有可触达的遮罩/层次；窄屏不显示拖拽手柄。
+3. sidebar 折叠态显示 36px 入口，展开态有可触达的遮罩/层次；窄屏不显示拖拽手柄。
 4. composer 在窄屏不被横向 clearance 挤出，刷新后样式仍然存在。
 5. 在官方 DSH 或兼容构建的 launcher 中启动一次，确认 home patch 被加载；不能以 profile patch 的暂时存在代替这个验收。
 6. 用缺失或变更的 layout/conversation artifact 运行安装，确认 fail closed 且没有新增 patch/link。
