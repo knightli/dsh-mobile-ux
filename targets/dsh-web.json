@@ -38,8 +38,19 @@
           "data-conversation-scroll",
           "data-composer-seat",
           "data-composer-card",
-          "_scroll"
+          "_scroll",
+          "_header",
+          "_titleRow",
+          "_titleCluster",
+          "_headerUtilities",
+          "_headerActions",
+          "_composerSeat"
         ]
+      },
+      {
+        "id": "session-log",
+        "path": ["@deepseek-ai", "dsh-session-log-export", "lib", "client.js"],
+        "tokens": ["_sessionLogButton"]
       }
     ]
   }

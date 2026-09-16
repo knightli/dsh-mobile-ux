@@ -107,8 +107,17 @@ function requiredCssTokens() {
     'grid-template-columns: 0 minmax(0, 1fr) 0',
     '[class$="_sidebarCol"]',
     '[data-sidebar-collapsed]',
+    '[class$="_sessionLogButton"]',
+    '[class$="_header"]',
+    '[class$="_titleRow"]',
+    '[class$="_titleCluster"]',
+    '[class$="_headerUtilities"]',
+    '[class$="_headerActions"]',
+    '[data-desktop-status]',
     '[data-conversation-scroll]',
     '[data-composer-seat]',
-    '[data-composer-card]'
+    '[data-composer-card]',
+    'safe-area-inset-bottom',
+    '100dvh'
   ];
 }

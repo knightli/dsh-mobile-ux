@@ -13,7 +13,11 @@
 @media (max-width: 1023px) {
   [class$="_frame"] {
     --dsh-mobile-sidebar-width: min(280px, calc(100vw - 16px));
+    --dsh-mobile-safe-bottom: env(safe-area-inset-bottom, 0px);
+    --dsh-mobile-viewport-height: 100dvh;
     grid-template-columns: 0 minmax(0, 1fr) 0 !important;
+    min-block-size: var(--dsh-mobile-viewport-height);
+    max-block-size: var(--dsh-mobile-viewport-height);
   }
 
   [class$="_centerCol"] {
@@ -22,6 +26,22 @@
 
   [class$="_detailsCol"] {
     grid-column: 3;
+  }
+
+  [class$="_sessionLogButton"] {
+    min-width: 32px !important;
+    width: 32px;
+    height: 32px;
+    gap: 0;
+    padding: 6px !important;
+  }
+
+  [class$="_sessionLogButton"] span {
+    display: none;
+  }
+
+  [class$="_sessionLogButton"] svg {
+    flex: none;
   }
 
   [class$="_handle"] {
@@ -59,12 +79,55 @@
     pointer-events: none;
   }
 
+  [class$="_frame"] [class$="_titleRow"] {
+    gap: 8px;
+  }
+
+  [class$="_frame"] [class$="_headerUtilities"] {
+    margin-inline-start: 0;
+  }
+
+  [class$="_frame"][data-sidebar-collapsed] [class$="_header"] {
+    padding-inline-start: 76px;
+  }
+
+  [class$="_frame"][data-sidebar-collapsed] [class$="_titleCluster"] {
+    min-inline-size: 0;
+  }
+
+  [class$="_frame"][data-sidebar-collapsed] [class$="_headerUtilities"] {
+    margin-inline-start: 0;
+  }
+
+  [class$="_frame"] [class$="_header"]:has([data-desktop-status]) [class$="_titleCluster"] {
+    flex-wrap: wrap;
+    row-gap: 4px;
+  }
+
+  [class$="_frame"] [class$="_header"]:has([data-desktop-status]) [class$="_headerActions"] {
+    flex-basis: 100%;
+    margin-inline-start: auto;
+    justify-content: flex-end;
+  }
+
+  [class$="_frame"] [class$="_header"]:has([data-desktop-status]) [data-desktop-status] {
+    margin-inline-start: auto;
+    text-align: end;
+  }
+
   [class$="_frame"] [data-conversation-scroll] {
     --dsh-composer-side-clearance: 0px;
+    min-block-size: 0;
+    max-block-size: calc(var(--dsh-mobile-viewport-height) - var(--dsh-mobile-safe-bottom));
+    padding-block-end: var(--dsh-mobile-safe-bottom);
   }
 
   [class$="_frame"] [data-composer-seat] {
     padding-inline: 12px;
+    padding-block-end: max(8px, var(--dsh-mobile-safe-bottom));
+    position: sticky;
+    inset-block-end: 0;
+    z-index: 7;
   }
 
   [class$="_frame"] [data-composer-card] {

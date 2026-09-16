@@ -12,6 +12,8 @@ export function createClientBundle(css) {
     const CSS_TEXT = ${cssLiteral};
     let observer;
     let timeout;
+    let accessibilityObserver;
+    let accessibilityTimeout;
 
     function styleSelector() {
       return 'style[data-dsh-mobile-ux-style="' + STYLE_ID + '"]';
@@ -39,6 +41,32 @@ export function createClientBundle(css) {
       };
     }
 
+    function enhanceSessionLogButtons() {
+      const buttons = document.querySelectorAll?.('[class$="_sessionLogButton"]') ?? [];
+      for (const button of buttons) {
+        if (typeof button.getAttribute !== 'function' || typeof button.setAttribute !== 'function') continue;
+        const label = button.querySelector?.('span')?.textContent?.trim() || 'Session log';
+        if (!button.getAttribute('aria-label')) button.setAttribute('aria-label', label);
+        if (!button.getAttribute('title')) button.setAttribute('title', label);
+      }
+    }
+
+    function stopAccessibilityObserver() {
+      accessibilityObserver?.disconnect();
+      accessibilityObserver = undefined;
+      if (accessibilityTimeout !== undefined) clearTimeout(accessibilityTimeout);
+      accessibilityTimeout = undefined;
+    }
+
+    function observeSessionLogButtons() {
+      enhanceSessionLogButtons();
+      if (typeof MutationObserver !== 'function') return;
+      stopAccessibilityObserver();
+      accessibilityObserver = new MutationObserver(enhanceSessionLogButtons);
+      accessibilityObserver.observe(document.documentElement, { childList: true, subtree: true });
+      accessibilityTimeout = setTimeout(stopAccessibilityObserver, 5000);
+    }
+
     function removeOwnedStyle() {
       document.head.querySelector(styleSelector())?.remove();
     }
@@ -62,11 +90,13 @@ export function createClientBundle(css) {
     }
 
     function evaluate() {
+      enhanceSessionLogButtons();
       const compatibility = inspectDocument();
       if (compatibility.ok) {
         ensureStyle();
         publish('compatible', { compatibility });
         stopWaiting();
+        observeSessionLogButtons();
         return;
       }
       removeOwnedStyle();

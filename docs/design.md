@@ -25,6 +25,9 @@ This implementation keeps those behaviors but changes the selector contract to s
 | Details column gets an independent mobile drawer | Exclude | The requested scope is the sidebar/main shell. Adding another state owner would turn a CSS adaptation into a UI feature. The narrow grid still reserves an explicit details track at column 3. |
 | Generated CSS-module selectors | Exclude | Hashes drift with builds and cannot be a compatibility contract. |
 | JavaScript layout manipulation | Exclude | CSS owns geometry; `client.js` only gates style injection on observed hooks. |
+| Session log text on narrow screens | Hide only the text span and keep the download SVG | The semantic button suffix remains the selector contract; runtime adds an accessible name only when the host did not provide one. |
+| Desktop status placement | Reflow only when `[data-desktop-status]` exists | The hook is optional, so builds without desktop status keep their normal header layout. |
+| Keyboard/address-bar viewport changes | Use `100dvh` and `env(safe-area-inset-bottom, 0px)` | This keeps the composer seat inside the dynamic viewport without adding a `visualViewport` state owner. |
 
 ## Installation control plane
 

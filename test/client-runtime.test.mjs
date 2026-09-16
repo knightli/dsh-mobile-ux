@@ -15,7 +15,7 @@ test('generated client bundle registers a factory whose return value exports app
 });
 
 test('client apply injects one compatible style for repeated calls', async () => {
-  const { context, document, registrations } = await loadBundle({ compatible: true });
+  const { context, document, registrations, sessionLogButton } = await loadBundle({ compatible: true, sessionLog: true });
   const exports = registrations[0].factory(() => {});
 
   exports.apply();
@@ -27,6 +27,8 @@ test('client apply injects one compatible style for repeated calls', async () =>
   assert.equal(context.__DSH_MOBILE_UX__.compatibility.ok, true);
   assert.equal(context.__DSH_MOBILE_UX__.compatibility.layout, true);
   assert.equal(context.__DSH_MOBILE_UX__.compatibility.conversation, true);
+  assert.equal(sessionLogButton.getAttribute('aria-label'), 'Session log');
+  assert.equal(sessionLogButton.getAttribute('title'), 'Session log');
 });
 
 test('client apply fails closed without compatible hooks', async () => {
@@ -39,9 +41,9 @@ test('client apply fails closed without compatible hooks', async () => {
   assert.equal(context.__DSH_MOBILE_UX__.state, 'incompatible');
 });
 
-async function loadBundle({ compatible = false } = {}) {
+async function loadBundle({ compatible = false, sessionLog = false } = {}) {
   const bundle = await readFile(new URL('../dist/client.js', import.meta.url), 'utf8');
-  const document = createFakeDocument(compatible);
+  const { document, sessionLogButton } = createFakeDocument(compatible, sessionLog);
   const registrations = [];
   const context = {
     document,
@@ -57,10 +59,10 @@ async function loadBundle({ compatible = false } = {}) {
   };
   if (compatible) context.MutationObserver = FakeMutationObserver;
   vm.runInNewContext(bundle, context);
-  return { context, document, registrations };
+  return { context, document, registrations, sessionLogButton };
 }
 
-function createFakeDocument(compatible) {
+function createFakeDocument(compatible, sessionLog) {
   const selectors = compatible
     ? new Set([
       '[class$="_frame"]',
@@ -80,23 +82,41 @@ function createFakeDocument(compatible) {
       return head.appended[0] ?? null;
     }
   };
-  return {
-    head,
-    documentElement: {},
-    createElement() {
-      return {
-        dataset: {},
-        parentNode: null,
-        textContent: '',
-        remove() {
-          const index = head.appended.indexOf(this);
-          if (index >= 0) head.appended.splice(index, 1);
-        }
-      };
-    },
+  const sessionLogButton = sessionLog ? {
+    attributes: new Map(),
     querySelector(selector) {
-      return selectors.has(selector) ? {} : null;
+      return selector === 'span' ? { textContent: 'Session log' } : null;
+    },
+    getAttribute(name) {
+      return this.attributes.get(name) ?? null;
+    },
+    setAttribute(name, value) {
+      this.attributes.set(name, value);
     }
+  } : null;
+  return {
+    document: {
+      head,
+      documentElement: {},
+      createElement() {
+        return {
+          dataset: {},
+          parentNode: null,
+          textContent: '',
+          remove() {
+            const index = head.appended.indexOf(this);
+            if (index >= 0) head.appended.splice(index, 1);
+          }
+        };
+      },
+      querySelector(selector) {
+        return selectors.has(selector) ? {} : null;
+      },
+      querySelectorAll(selector) {
+        return selector === '[class$="_sessionLogButton"]' && sessionLogButton ? [sessionLogButton] : [];
+      }
+    },
+    sessionLogButton
   };
 }
 
