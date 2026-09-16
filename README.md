@@ -4,7 +4,7 @@
 
 ## 设计边界
 
-- `styles/mobile.css` 是行为核心：桌面端不添加任何规则；窄视口将三列布局收缩为 `0 / 1fr / 0`，把 sidebar 变成覆盖层，并保留折叠态的 56px 入口。
+- `styles/mobile.css` 是行为核心：桌面端不添加任何规则；窄视口将三列布局收缩为 `0 / 1fr / 0`，把 sidebar 变成覆盖层，并保留折叠态的 36px 入口。
 - `dist/client.js` 是 DSH 浏览器模块入口：沿用 `window.__ModuleLoader__.load(...)` 的形状，只做幂等 CSS 注入、目标 DOM 兼容性检测和状态报告，不搬运布局状态机。
 - CSS 优先使用 DSH 的稳定 `data-*` 钩子，结构兜底使用 `_frame`、`_sidebarCol` 等语义后缀；不依赖构建时生成的 hash class。
 - 窄屏下完全隐藏 Session log 下载按钮，避免它占用移动 header 空间。
