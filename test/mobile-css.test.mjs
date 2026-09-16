@@ -26,7 +26,14 @@ test('mobile CSS keeps desktop outside the narrow media query and uses semantic 
   assert.match(css, /\[class\$="_titleCluster"\]/);
   assert.match(css, /\[class\$="_headerUtilities"\]/);
   assert.match(css, /\[class\$="_headerActions"\]/);
-  assert.match(css, /\[data-desktop-status\]/);
+  assert.match(css, /\[class\$="_tabs"\]/);
+  assert.match(css, /\[class\*="_collapsed"\]/);
+  assert.match(css, /\[class\*="_logoRow"\]/);
+  assert.match(css, /\[class\*="_iconButton"\]/);
+  assert.match(css, /\[class\*="_toggle"\]/);
+  assert.match(css, /\[class\*="_railFish"\]/);
+  assert.match(css, /width: 36px !important/);
+  assert.match(css, /padding-inline-start: 56px/);
   assert.match(css, /\[data-conversation-scroll\]/);
   assert.match(css, /\[data-conversation-scroll\] \[class\$="_scroll"\]/);
   assert.match(css, /padding: 12px 12px 76px/);

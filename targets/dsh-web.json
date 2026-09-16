@@ -44,6 +44,7 @@
           "_titleCluster",
           "_headerUtilities",
           "_headerActions",
+          "_tabs",
           "_composerSeat"
         ]
       },
@@ -51,6 +52,11 @@
         "id": "session-log",
         "path": ["@deepseek-ai", "dsh-session-log-export", "lib", "client.js"],
         "tokens": ["_sessionLogButton"]
+      },
+      {
+        "id": "sidebar",
+        "path": ["@deepseek-ai", "dsh-client-ui-sidebar", "lib", "client.js"],
+        "tokens": ["_collapsed", "_logoRow", "_iconButton", "_toggle", "_railFish"]
       }
     ]
   }

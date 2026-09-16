@@ -8,7 +8,7 @@
 - `dist/client.js` 是 DSH 浏览器模块入口：沿用 `window.__ModuleLoader__.load(...)` 的形状，只做幂等 CSS 注入、目标 DOM 兼容性检测和状态报告，不搬运布局状态机。
 - CSS 优先使用 DSH 的稳定 `data-*` 钩子，结构兜底使用 `_frame`、`_sidebarCol` 等语义后缀；不依赖构建时生成的 hash class。
 - 窄屏下 Session log 保留下载 SVG、隐藏文字并收紧为图标按钮；runtime 只在缺少时补 `aria-label`/`title`。
-- 页面存在 `[data-desktop-status]` 时，header actions/status 在标题下方右对齐；composer 使用 `dvh` 与 safe-area bottom，避免键盘和 Safari 地址栏遮挡发送按钮。
+- header/title/tabs 在窄屏保持单行标题区域与可横向滚动的 tabs；composer 使用 `dvh` 与 safe-area bottom，避免键盘和 Safari 地址栏遮挡发送按钮。
 - 安装写入 home 级 `cordis.patch.yml`，并在 `profiles/node_modules/dsh-mobile-ux` 建立指向本插件目录的链接。兼容性失败时不会写 patch 或链接。
 
 ## 构建与检查
