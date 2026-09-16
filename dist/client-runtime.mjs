@@ -60,6 +60,21 @@ export function createClientBundle(css) {
       return typeof navigator !== 'undefined' && navigator.standalone === true;
     }
 
+    function isMobileTouchContext() {
+      // PWA remains a supported fallback, including iOS's navigator.standalone.
+      if (isPwaContext()) return true;
+      if (typeof globalThis.matchMedia !== 'function') return false;
+      try {
+        const narrow = globalThis.matchMedia('(max-width: 1023px)').matches;
+        const coarse = globalThis.matchMedia('(pointer: coarse)').matches;
+        const touchPoints = Number(globalThis.navigator?.maxTouchPoints);
+        return narrow && (coarse || touchPoints > 0);
+      } catch {
+        // Do not bind a document-wide touch handler when capability detection is unavailable.
+        return false;
+      }
+    }
+
     function findSidebarToggle() {
       const frame = document.querySelector('[class$="_frame"]');
       const sidebar = frame?.querySelector('[class$="_sidebarCol"]');
@@ -67,7 +82,7 @@ export function createClientBundle(css) {
     }
 
     function installRefresh() {
-      if (refreshFeature || !isPwaContext()) return;
+      if (refreshFeature || !isMobileTouchContext()) return;
       refreshFeature = createPullRefreshFeature({
         eventTarget: document,
         // Half-speed animation: twice the physical drag for the same progress.

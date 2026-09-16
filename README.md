@@ -1,6 +1,6 @@
 # dsh-mobile-ux
 
-一个独立、可维护的通用 DSH Web 移动端体验插件。它以 CSS 调整窄视口下的 shell 布局，并在 PWA 中提供 sidebar 手势，不参与 session、认证、权限、传输或业务状态管理。只要 DSH 构建保留下面的 web-profile 兼容契约，官方 DSH 及兼容构建都可以复用这个包。
+一个独立、可维护的通用 DSH Web 移动端体验插件。它以 CSS 调整窄视口下的 shell 布局，在 PWA 中提供 sidebar 手势，并在窄屏触控浏览器（包括普通移动浏览器标签页）中提供上拉刷新，不参与 session、认证、权限、传输或业务状态管理。只要 DSH 构建保留下面的 web-profile 兼容契约，官方 DSH 及兼容构建都可以复用这个包。
 
 ## 来源与许可证
 
@@ -11,12 +11,12 @@
 ## 设计边界
 
 - `styles/mobile.css` 是行为核心：桌面端不添加任何规则；窄视口将三列布局收缩为 `0 / 1fr / 0`，把 sidebar 变成覆盖层，并保留折叠态的 36px 入口。
-- `dist/client.js` 是 DSH 浏览器模块入口：沿用 `window.__ModuleLoader__.load(...)` 的形状，负责幂等 CSS 注入、目标 DOM 兼容性检测和 PWA 内的 sidebar 手势绑定，不搬运布局状态机。
+- `dist/client.js` 是 DSH 浏览器模块入口：沿用 `window.__ModuleLoader__.load(...)` 的形状，负责幂等 CSS 注入、目标 DOM 兼容性检测、PWA 内的 sidebar 手势绑定，以及窄屏触控浏览器中的上拉刷新，不搬运布局状态机。
 - CSS 优先使用 DSH 的稳定 `data-*` 钩子，结构兜底使用 `_frame`、`_sidebarCol` 等语义后缀；不依赖构建时生成的 hash class。
 - 窄屏下完全隐藏 Session log 下载按钮，避免它占用移动 header 空间。
 - header/title/tabs 在窄屏保持单行标题区域与可横向滚动的 tabs；composer 使用 `dvh` 与 safe-area bottom，避免键盘和 Safari 地址栏遮挡发送按钮。
 - 在已安装的 PWA 中，收起 sidebar 时从最左缘向右滑会触发现有 toggle，展开后从 sidebar 内向左滑会收起；该侧栏手势不调用 `preventDefault()`，因此 iOS 可能同时执行同源历史返回，这是已接受的产品边界。
-- 在窄屏 PWA 中，sidebar 收起且 conversation 滚动到底部后，继续向上拖动会显示鲸鱼刷新动画；达到 216px 阈值并松手后进入 3 秒倒计时，期间喷泉继续播放，触碰提示、喷泉、鲸鱼或水面所在区域即可取消并播放下沉动画；倒计时结束后刷新页面，显示“正在刷新…”和 loading。回拖时隐藏提示和三个小水滴。输入框、按钮、链接及左侧开栏手势区域不启动刷新；偏好减少动态效果时使用文字提示。
+- 在窄屏触控浏览器（包括普通移动浏览器标签页和 PWA）中，sidebar 收起且 conversation 滚动到底部后，继续向上拖动会显示鲸鱼刷新动画；达到 216px 阈值并松手后进入 3 秒倒计时，期间喷泉继续播放，触碰提示、喷泉、鲸鱼或水面所在区域即可取消并播放下沉动画；倒计时结束后刷新页面，显示“正在刷新…”和 loading。回拖时隐藏提示和三个小水滴。输入框、按钮、链接及左侧开栏手势区域不启动刷新；偏好减少动态效果时使用文字提示。sidebar 边缘手势仍只在 PWA 中启用。
 - 安装写入 home 级 `cordis.patch.yml`，并在 `profiles/node_modules/dsh-mobile-ux` 建立指向本插件目录的链接。兼容性失败时不会写 patch 或链接。
 
 ## 构建与检查
@@ -79,4 +79,4 @@ home-level patch 是持久边界：部分 launcher 会刷新 `profiles/<profile>
 5. 在官方 DSH 或兼容构建的 launcher 中启动一次，确认 home patch 被加载；不能以 profile patch 的暂时存在代替这个验收。
 6. 用缺失或变更的 layout/conversation artifact 运行安装，确认 fail closed 且没有新增 patch/link。
 7. 在 iOS PWA 中测试最左缘右滑开栏，以及展开 sidebar 后从 sidebar 内向左滑收起；同源历史返回可能与开栏同时发生，这是已接受的边界。
-8. 在 iOS PWA 中滚动到会话底部继续向上拖动，确认提示出现、回拖时提示收回，达到阈值松手后页面刷新；在 composer 输入框和按钮上拖动不触发刷新。
+8. 在 iOS PWA 或普通移动 Safari/Chrome/Edge 标签页中滚动到会话底部继续向上拖动，确认提示出现、回拖时提示收回，达到阈值松手后页面刷新；在 composer 输入框和按钮上拖动不触发刷新。

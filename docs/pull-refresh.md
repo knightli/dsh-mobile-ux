@@ -54,7 +54,7 @@ until the new document replaces it. While waiting, only the loading spinner anim
 the whale, fountain and sea remain on a settled frame. Disabling/destroying removes
 the view and cancels any pending timer. The scroll target is revalidated before refresh.
 The module performs no refresh until release above the threshold; the host callback
-owns the actual action. Only the DSH adapter knows DSH selectors or PWA eligibility.
+owns the actual action. Only the DSH adapter knows DSH selectors or device eligibility.
 
 The renderer contract is a factory `({ host, onCancel }) => ({ update(state), destroy() })`.
 The state includes `distance`, unbounded `progress`, `direction`, `reversing`,
@@ -66,8 +66,12 @@ CSS. Use a host outside transformed/clipped ancestors, normally `document.body`.
 
 ## DSH behavior and acceptance
 
-The DSH adapter enables refresh only in a narrow PWA with a collapsed sidebar.
-The leftmost 64px stay with the sidebar gesture. Composer, form controls, buttons,
+The DSH adapter enables refresh in a narrow touch context (a normal mobile browser
+tab or an installed PWA) with a collapsed sidebar. It recognizes a PWA first, then
+uses a narrow viewport plus coarse-pointer or touch-point capability for normal
+browser tabs; it does not sniff the user agent. Sidebar edge gestures remain PWA-only.
+The leftmost 64px remain reserved for the PWA sidebar boundary; in a normal browser
+tab they are simply excluded from refresh. Composer, form controls, buttons,
 links and editable areas do not initiate refresh. Reduced-motion users receive
 the text renderer. The DSH adapter uses a 216px refresh threshold: twice the physical drag produces
 the same animation progress as the archived 108px demo. All visual stages scale
@@ -79,9 +83,11 @@ moving and scaling; from 200% to 280% it fades out. Progress follows drag distan
 not elapsed time. The fixed animation layer does not transform the real conversation
 or composer. Their movement under native overscroll requires device acceptance.
 
-Verify on an actual iOS/Android PWA: scroll-bottom eligibility, forward/reverse
-animation, native bounce, composer and keyboard, cancellation, disabling while
-armed, one reload per release, and sidebar operation while refresh is disabled.
+Verify on an actual iOS/Android PWA and a normal mobile Safari/Chrome/Edge tab:
+scroll-bottom eligibility, forward/reverse animation, native bounce, composer and
+keyboard, cancellation, disabling while armed, and one reload per release. Verify
+sidebar operation separately in the PWA; a normal browser tab must not acquire the
+sidebar edge gesture.
 Automated tests validate lifecycle and frame state; they do not establish physical
 touch or native overscroll behavior.
 

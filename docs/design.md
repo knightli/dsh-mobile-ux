@@ -8,10 +8,10 @@ The browser entry is `dist/client.js`. Its only durable responsibilities are:
 2. wait for the semantic layout/conversation hooks to appear;
 3. inject one owned style element when the hooks are compatible;
 4. bind the PWA-only sidebar gestures to the existing semantic toggle;
-5. bind the PWA-only bottom pull-to-refresh gesture to the conversation scroll boundary;
+5. bind the narrow touch bottom pull-to-refresh gesture to the conversation scroll boundary;
 6. publish `globalThis.__DSH_MOBILE_UX__` as `waiting`, `compatible`, or `incompatible`.
 
-The factory receives one `require` argument and returns `module.exports`; this is the DSH client-module materialization contract. The plugin does not create a React tree, own sidebar state, or rearrange the layout. Its small browser event handler invokes the existing sidebar toggle after a qualifying PWA swipe, owns a switchable pull-refresh module with an ephemeral renderer, and reloads the page only after an armed bottom pull is released.
+The factory receives one `require` argument and returns `module.exports`; this is the DSH client-module materialization contract. The plugin does not create a React tree, own sidebar state, or rearrange the layout. Its small browser event handler invokes the existing sidebar toggle after a qualifying PWA swipe, owns a switchable pull-refresh module with an ephemeral renderer in narrow touch contexts, and reloads the page only after an armed bottom pull is released.
 
 ## Reference behavior adopted
 
@@ -28,7 +28,7 @@ This implementation keeps those behaviors but changes the selector contract to s
 | Generated CSS-module selectors | Exclude | Hashes drift with builds and cannot be a compatibility contract. |
 | JavaScript layout manipulation or state ownership | Exclude | CSS owns geometry; the browser entry only invokes the existing toggle and does not recreate layout or sidebar state. |
 | PWA sidebar swipe gestures | Include | A left-edge right swipe opens the existing sidebar toggle; a left swipe inside an open sidebar closes it. The handler does not call `preventDefault()`, alter history, or persist an open intent, so iOS history navigation may occur concurrently. |
-| PWA bottom pull-to-refresh | Include | When the conversation scroll is at its bottom boundary, an upward pull renders the whale animation (or text for reduced motion). Releasing after the trigger distance calls the normal page reload; reversing the pull retracts the prompt. Composer, form controls, buttons, and links are excluded. |
+| Narrow touch bottom pull-to-refresh | Include | In a narrow touch context, including a normal mobile browser tab or PWA, when the conversation scroll is at its bottom boundary, an upward pull renders the whale animation (or text for reduced motion). Releasing after the trigger distance calls the normal page reload; reversing the pull retracts the prompt. Composer, form controls, buttons, and links are excluded. |
 | Session log on narrow screens | Hide the whole download button | The semantic button suffix remains the selector contract, while the mobile shell keeps header space for navigation and title context. |
 | Sidebar toggle tooltip | Hide only a `role="tooltip"` sibling of the semantic sidebar toggle | The upstream Tooltip renders that bubble beside the toggle; scoping the rule to the sidebar prevents unrelated business tooltips from disappearing. |
 | Header/title/tabs placement | Keep the title row single-line and let tabs scroll horizontally | The generic shell contract does not infer or position product-specific status widgets. |

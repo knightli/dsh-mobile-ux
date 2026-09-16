@@ -198,6 +198,36 @@ test('client keeps PWA sidebar gestures out of browser tabs and unrelated touche
   assert.equal(pwa.toggle.clicks, 0);
 });
 
+test('client enables bottom refresh in a narrow touch browser without enabling sidebar swipes', async () => {
+  const h = await loadBundle({ compatible: true, mobileMode: true });
+  const client = h.registrations[0].factory(() => {});
+  client.apply();
+  client.configure({ pullRefresh: { animation: 'text' } });
+
+  // A normal mobile tab must not acquire the PWA-only sidebar edge gesture.
+  const edgeEvent = (x, y) => ({
+    touches: [{ clientX: x, clientY: y }],
+    target: h.document.body
+  });
+  h.document.dispatch('touchstart', edgeEvent(16, 100));
+  h.document.dispatch('touchmove', edgeEvent(64, 100));
+  h.document.dispatch('touchend', { touches: [] });
+  assert.equal(h.toggle.clicks, 0);
+
+  h.conversation.scrollTop = 600;
+  h.conversation.clientHeight = 400;
+  h.conversation.scrollHeight = 1000;
+  const event = y => ({
+    touches: [{ clientX: 180, clientY: y }],
+    target: h.conversationContent
+  });
+  h.document.dispatch('touchstart', event(500));
+  h.document.dispatch('touchmove', event(200));
+  h.document.dispatch('touchend', { touches: [] });
+  assert.equal(h.document.body.appended[0].textContent, '正在刷新…');
+  assert.equal(h.location.reloads, 1);
+});
+
 test('configure cancels an armed refresh without disabling sidebar and can reenable refresh', async () => {
   const { document, conversation, conversationContent, toggle, location, registrations } = await loadBundle({ compatible: true, pwaMode: 'standalone' });
   const client = registrations[0].factory(() => {});
@@ -222,7 +252,7 @@ test('configure cancels an armed refresh without disabling sidebar and can reena
   assert.equal(location.reloads, 1);
   assert.throws(() => client.configure({ pullRefresh: { animation: 'unknown' } }), /Invalid/);
 });
-async function loadBundle({ compatible = false, pwaMode = 'none' } = {}) {
+async function loadBundle({ compatible = false, pwaMode = 'none', mobileMode = false } = {}) {
   const bundle = await readFile(new URL('../dist/client.js', import.meta.url), 'utf8');
   const fake = createFakeDocument(compatible);
   const registrations = [];
@@ -242,10 +272,15 @@ async function loadBundle({ compatible = false, pwaMode = 'none' } = {}) {
       }
     }
   };
-  if (pwaMode === 'standalone') {
-    context.matchMedia = (query) => ({ matches: query === '(display-mode: standalone)' });
+  const mediaQueries = new Set();
+  if (pwaMode === 'standalone') mediaQueries.add('(display-mode: standalone)');
+  if (mobileMode) {
+    mediaQueries.add('(max-width: 1023px)');
+    mediaQueries.add('(pointer: coarse)');
+    context.navigator = { ...(context.navigator ?? {}), maxTouchPoints: 5 };
   }
-  if (pwaMode === 'ios') context.navigator = { standalone: true };
+  if (mediaQueries.size) context.matchMedia = (query) => ({ matches: mediaQueries.has(query) });
+  if (pwaMode === 'ios') context.navigator = { ...(context.navigator ?? {}), standalone: true };
   if (compatible) context.MutationObserver = FakeMutationObserver;
   vm.runInNewContext(bundle, context);
   return { context, ...fake, registrations };
