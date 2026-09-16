@@ -160,43 +160,6 @@
     z-index: 7;
   }
 
-  [class$="_frame"] [data-dsh-mobile-refresh-indicator] {
-    --dsh-mobile-refresh-progress: 0;
-    position: fixed;
-    z-index: 50;
-    inset-inline-start: 50%;
-    inset-block-end: calc(env(safe-area-inset-bottom, 0px) + 12px);
-    max-inline-size: calc(100vw - 24px);
-    color: var(--dsw-alias-label-secondary, #666);
-    font-size: 12px;
-    line-height: 18px;
-    text-align: center;
-    white-space: nowrap;
-    pointer-events: none;
-    opacity: 0;
-    transform: translate(-50%, calc((1 - var(--dsh-mobile-refresh-progress)) * 100%));
-    transition: opacity 160ms ease, transform 160ms ease;
-  }
-
-  [class$="_frame"] [data-dsh-mobile-refresh-indicator][data-state="pulling"],
-  [class$="_frame"] [data-dsh-mobile-refresh-indicator][data-state="armed"] {
-    opacity: 1;
-  }
-
-  [class$="_frame"] [data-dsh-mobile-refresh-indicator][data-state="armed"] {
-    color: var(--dsw-static-deepseek-500, #4d8dff);
-  }
-
-  [class$="_frame"] [data-dsh-mobile-refresh-indicator][data-dragging="true"] {
-    transition: none;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    [class$="_frame"] [data-dsh-mobile-refresh-indicator] {
-      transition: none;
-    }
-  }
-
   [class$="_frame"] [data-composer-card] {
     max-inline-size: 100%;
   }

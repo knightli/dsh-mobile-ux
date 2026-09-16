@@ -8,6 +8,7 @@
   "exports": {
     ".": "./dist/index.mjs",
     "./client": "./dist/client.js",
+    "./pull-refresh": "./dist/features/pull-refresh/index.mjs",
     "./package.json": "./package.json",
     "./styles/mobile.css": "./styles/mobile.css"
   },

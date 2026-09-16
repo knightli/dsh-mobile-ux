@@ -37,8 +37,6 @@ test('mobile CSS keeps desktop outside the narrow media query and uses semantic 
   assert.match(css, /padding: 12px 12px 76px/);
   assert.match(css, /\[data-composer-seat\]/);
   assert.match(css, /padding-block-end: max\(8px, var\(--dsh-mobile-safe-bottom\)\)/);
-  assert.match(css, /data-dsh-mobile-refresh-indicator/);
-  assert.match(css, /data-state="armed"/);
   assert.equal((css.match(/padding-block-end:[^;]*var\(--dsh-mobile-safe-bottom\)/g) ?? []).length, 1);
   assert.match(css, /max-block-size: calc\(var\(--dsh-mobile-viewport-height\) - var\(--dsh-mobile-safe-bottom\)\)/);
   assert.doesNotMatch(css, /\.[A-Za-z0-9]{5,12}_[A-Za-z0-9_-]+/);

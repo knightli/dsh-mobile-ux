@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { cp, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createClientBundle } from '../src/client-runtime.mjs';
@@ -14,6 +14,7 @@ export async function build() {
   for (const file of moduleFiles) {
     await writeFile(join(dist, file), await readFile(join(ROOT, 'src', file), 'utf8'), 'utf8');
   }
+  await cp(join(ROOT, 'src', 'features'), join(dist, 'features'), { recursive: true });
   return { dist, files: ['client.js', ...moduleFiles] };
 }
 

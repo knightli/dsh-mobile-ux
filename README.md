@@ -15,8 +15,8 @@
 - CSS 优先使用 DSH 的稳定 `data-*` 钩子，结构兜底使用 `_frame`、`_sidebarCol` 等语义后缀；不依赖构建时生成的 hash class。
 - 窄屏下完全隐藏 Session log 下载按钮，避免它占用移动 header 空间。
 - header/title/tabs 在窄屏保持单行标题区域与可横向滚动的 tabs；composer 使用 `dvh` 与 safe-area bottom，避免键盘和 Safari 地址栏遮挡发送按钮。
-- 在已安装的 PWA 中，收起 sidebar 时从最左缘向右滑会触发现有 toggle，展开后从 sidebar 内向左滑会收起；插件不调用 `preventDefault()`，因此 iOS 可能同时执行同源历史返回，这是已接受的产品边界。
-- 在已安装的 PWA 中，滚动到 conversation 底部后继续向上拖动，会让纯文字提示“松开手后刷新页面”从屏幕底部外侧跟随手势进入；达到阈值并松手才刷新，手势回退到底部时提示会退回屏幕外。输入框、按钮和链接区域不启动该手势。
+- 在已安装的 PWA 中，收起 sidebar 时从最左缘向右滑会触发现有 toggle，展开后从 sidebar 内向左滑会收起；该侧栏手势不调用 `preventDefault()`，因此 iOS 可能同时执行同源历史返回，这是已接受的产品边界。
+- 在窄屏 PWA 中，sidebar 收起且 conversation 滚动到底部后，继续向上拖动会显示鲸鱼刷新动画；达到 216px 阈值并松手后进入 3 秒倒计时，期间喷泉继续播放，触碰提示、喷泉、鲸鱼或水面所在区域即可取消并播放下沉动画；倒计时结束后刷新页面，显示“正在刷新…”和 loading。回拖时隐藏提示和三个小水滴。输入框、按钮、链接及左侧开栏手势区域不启动刷新；偏好减少动态效果时使用文字提示。
 - 安装写入 home 级 `cordis.patch.yml`，并在 `profiles/node_modules/dsh-mobile-ux` 建立指向本插件目录的链接。兼容性失败时不会写 patch 或链接。
 
 ## 构建与检查
@@ -32,6 +32,8 @@ npm test
 ## 交互原型归档
 
 独立的鲸鱼上拉刷新交互 demo 保存在 [docs/prototypes/whale-refresh-demo.html](docs/prototypes/whale-refresh-demo.html)。它只用于观察页面位移、喷水动画和提示文字的时序，不属于插件运行时，也不会随安装器自动启用。
+
+正式刷新模块提供独立启停和 `whale` / `text` 渲染器切换，供未来设置界面接入。其他插件可通过 `dsh-mobile-ux/pull-refresh` 复用；接口及设备验收边界见 [模块文档](docs/pull-refresh.md)。当前尚无设置界面或设置持久化。
 
 ## 从 checkout 或 Git 依赖使用
 

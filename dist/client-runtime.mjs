@@ -1,12 +1,12 @@
+import { calculatePullState } from './features/pull-refresh/core.mjs';
+import { createPullRefreshFeature } from './features/pull-refresh/feature.mjs';
+import { createWhaleRenderer } from './features/pull-refresh/whale-renderer.mjs';
+import { createTextRenderer } from './features/pull-refresh/text-renderer.mjs';
 const PLUGIN_ID = 'dsh-mobile-ux';
 const STYLE_ID = `${PLUGIN_ID}/mobile.css`;
 const EDGE_SWIPE_MAX_START_X = 64;
 const SWIPE_TRIGGER_DISTANCE = 48;
 const SWIPE_AXIS_TOLERANCE = 48;
-const REFRESH_HINT_DISTANCE = 28;
-const REFRESH_TRIGGER_DISTANCE = 72;
-const REFRESH_AXIS_TOLERANCE = 48;
-const REFRESH_BOTTOM_TOLERANCE = 4;
 
 export function createClientBundle(css) {
   const cssLiteral = JSON.stringify(css);
@@ -19,16 +19,16 @@ export function createClientBundle(css) {
     const EDGE_SWIPE_MAX_START_X = ${String(EDGE_SWIPE_MAX_START_X)};
     const SWIPE_TRIGGER_DISTANCE = ${String(SWIPE_TRIGGER_DISTANCE)};
     const SWIPE_AXIS_TOLERANCE = ${String(SWIPE_AXIS_TOLERANCE)};
-    const REFRESH_HINT_DISTANCE = ${String(REFRESH_HINT_DISTANCE)};
-    const REFRESH_TRIGGER_DISTANCE = ${String(REFRESH_TRIGGER_DISTANCE)};
-    const REFRESH_AXIS_TOLERANCE = ${String(REFRESH_AXIS_TOLERANCE)};
-    const REFRESH_BOTTOM_TOLERANCE = ${String(REFRESH_BOTTOM_TOLERANCE)};
-    const REFRESH_INDICATOR_ATTRIBUTE = 'data-dsh-mobile-refresh-indicator';
     const CSS_TEXT = ${cssLiteral};
     let observer;
     let timeout;
     let gestureCleanup;
-    let refreshIndicator;
+    let refreshFeature;
+    let refreshSettings = { enabled: true, animation: 'whale' };
+    ${calculatePullState.toString()}
+    ${createPullRefreshFeature.toString()}
+    ${createWhaleRenderer.toString()}
+    ${createTextRenderer.toString()}
 
     function styleSelector() {
       return 'style[data-dsh-mobile-ux-style="' + STYLE_ID + '"]';
@@ -66,81 +66,73 @@ export function createClientBundle(css) {
       return sidebar?.querySelector('[class*="_toggle"]');
     }
 
-    function findConversationScroll() {
-      return document.querySelector('[data-conversation-scroll]');
+    function installRefresh() {
+      if (refreshFeature || !isPwaContext()) return;
+      refreshFeature = createPullRefreshFeature({
+        eventTarget: document,
+        // Half-speed animation: twice the physical drag for the same progress.
+        threshold: 216,
+        refreshDelayMs: 3000,
+        resolveTarget() {
+          const frame = document.querySelector('[class$="_frame"]');
+          const scroller = document.querySelector('[data-conversation-scroll]');
+          // Runtime selection is resolved again for every gesture/session.
+          if (!frame?.hasAttribute('data-sidebar-collapsed')) return null;
+          if (typeof matchMedia === 'function' && matchMedia('(min-width: 1024px)').matches) return null;
+          return { host: document.body, scroller };
+        },
+        isAtBottom(scroller) {
+          return Number.isFinite(scroller?.scrollTop)
+            && scroller.scrollTop + scroller.clientHeight >= scroller.scrollHeight - 4;
+        },
+        isExcludedTarget(target, event) {
+          return event.touches[0].clientX <= EDGE_SWIPE_MAX_START_X
+            || Boolean(target?.closest?.('[data-composer-seat], input, textarea, select, button, a, [contenteditable="true"]'));
+        },
+        onRefresh() {
+          const active = refreshFeature;
+          const reload = () => {
+            if (refreshFeature === active) globalThis.location?.reload?.();
+          };
+          // Let the refreshing frame paint before starting navigation.
+          requestAnimationFrame(() => requestAnimationFrame(reload));
+        },
+        createRenderer(options) {
+          const reduced = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+          return refreshSettings.animation === 'text' || reduced
+            ? createTextRenderer(options) : createWhaleRenderer(options);
+        },
+      });
+      refreshFeature.setEnabled(refreshSettings.enabled);
     }
 
-    function isAtBottom(scroller) {
-      return Number.isFinite(scroller?.scrollTop)
-        && Number.isFinite(scroller?.clientHeight)
-        && Number.isFinite(scroller?.scrollHeight)
-        && scroller.scrollTop + scroller.clientHeight >= scroller.scrollHeight - REFRESH_BOTTOM_TOLERANCE;
-    }
-
-    function isRefreshExcludedTarget(target) {
-      return Boolean(target?.closest?.('[data-composer-seat], input, textarea, select, button, a, [contenteditable="true"]'));
-    }
-
-    function canStartRefresh(scroller, target) {
-      if (!scroller || !isAtBottom(scroller)) return false;
-      if (typeof scroller.contains === 'function' && !scroller.contains(target)) return false;
-      return !isRefreshExcludedTarget(target);
-    }
-
-    function refreshHost(scroller, frame) {
-      return frame ?? scroller;
-    }
-
-    function ensureRefreshIndicator(scroller, frame) {
-      const host = refreshHost(scroller, frame);
-      if (refreshIndicator?.parentNode === host) return refreshIndicator;
-      refreshIndicator?.remove?.();
-      refreshIndicator = undefined;
-      if (!host || typeof document.createElement !== 'function' || typeof host.appendChild !== 'function') return undefined;
-      const indicator = document.createElement('div');
-      indicator.setAttribute(REFRESH_INDICATOR_ATTRIBUTE, '');
-      indicator.setAttribute('role', 'status');
-      indicator.setAttribute('aria-live', 'polite');
-      indicator.textContent = '松开手后刷新页面';
-      host.appendChild(indicator);
-      refreshIndicator = indicator;
-      setRefreshIndicatorState(0);
-      return indicator;
-    }
-
-    function setRefreshIndicatorState(distance) {
-      if (!refreshIndicator) return;
-      const state = distance >= REFRESH_TRIGGER_DISTANCE
-        ? 'armed'
-        : distance >= REFRESH_HINT_DISTANCE ? 'pulling' : 'hidden';
-      const progress = Math.min(1, Math.max(0, distance / REFRESH_TRIGGER_DISTANCE));
-      refreshIndicator.dataset.state = state;
-      refreshIndicator.dataset.dragging = distance > 0 ? 'true' : 'false';
-      refreshIndicator.style.setProperty('--dsh-mobile-refresh-progress', String(progress));
-    }
-
-    function removeRefreshIndicator() {
-      refreshIndicator?.remove?.();
-      refreshIndicator = undefined;
+    function configure(options = {}) {
+      const next = { ...refreshSettings, ...options.pullRefresh };
+      if (typeof next.enabled !== 'boolean' || !['whale', 'text'].includes(next.animation)) {
+        throw new TypeError('Invalid pullRefresh settings');
+      }
+      refreshSettings = { enabled: next.enabled, animation: next.animation };
+      refreshFeature?.destroy();
+      refreshFeature = undefined;
+      if (inspectDocument().ok) installRefresh();
+      return { pullRefresh: { ...refreshSettings } };
     }
 
     function removeSidebarGestures() {
       gestureCleanup?.();
       gestureCleanup = undefined;
-      removeRefreshIndicator();
+      refreshFeature?.destroy();
+      refreshFeature = undefined;
     }
 
     function installSidebarGestures() {
       if (gestureCleanup || typeof document?.addEventListener !== 'function' || !isPwaContext()) return;
       let start;
       let triggered = false;
-      let refreshArmed = false;
       const firstTouch = (event) => event.touches?.[0];
       const reset = () => {
         start = undefined;
         triggered = false;
-        refreshArmed = false;
-        setRefreshIndicatorState(0);
       };
       const onTouchStart = (event) => {
         const point = firstTouch(event);
@@ -153,40 +145,16 @@ export function createClientBundle(css) {
           && point.clientX >= sidebarRect.left && point.clientX <= sidebarRect.right
           && sidebar.contains?.(event.target));
         if (!point || event.touches?.length !== 1 || (!opens && !closes)) {
-          const conversation = findConversationScroll();
-          if (point && event.touches?.length === 1 && canStartRefresh(conversation, event.target)) {
-            const indicator = ensureRefreshIndicator(conversation, frame);
-            if (indicator) {
-              start = { x: point.clientX, y: point.clientY, action: 'refresh', conversation };
-              triggered = false;
-              refreshArmed = false;
-              setRefreshIndicatorState(0);
-              return;
-            }
-          }
           reset();
           return;
         }
         start = { x: point.clientX, y: point.clientY, action: opens ? 'open' : 'close' };
         triggered = false;
-        refreshArmed = false;
-        setRefreshIndicatorState(0);
       };
       const onTouchMove = (event) => {
         if (!start || event.touches?.length !== 1) return;
         const point = firstTouch(event);
         if (!point) return;
-        if (start.action === 'refresh') {
-          const horizontalDistance = Math.abs(point.clientX - start.x);
-          if (horizontalDistance > REFRESH_AXIS_TOLERANCE || !isAtBottom(start.conversation)) {
-            reset();
-            return;
-          }
-          const distance = Math.max(0, start.y - point.clientY);
-          refreshArmed = distance >= REFRESH_TRIGGER_DISTANCE;
-          setRefreshIndicatorState(distance);
-          return;
-        }
         if (triggered) return;
         const dx = point.clientX - start.x;
         const dy = Math.abs(point.clientY - start.y);
@@ -202,11 +170,7 @@ export function createClientBundle(css) {
         toggle.click();
         triggered = true;
       };
-      const onTouchEnd = () => {
-        const refresh = start?.action === 'refresh' && refreshArmed;
-        reset();
-        if (refresh) globalThis.location?.reload?.();
-      };
+      const onTouchEnd = reset;
       const onTouchCancel = reset;
       document.addEventListener('touchstart', onTouchStart, { capture: true, passive: true });
       document.addEventListener('touchmove', onTouchMove, { capture: true, passive: true });
@@ -256,6 +220,7 @@ export function createClientBundle(css) {
       if (compatibility.ok) {
         ensureStyle();
         installSidebarGestures();
+        installRefresh();
         publish('compatible', { compatibility });
         stopWaiting();
         return;
@@ -286,6 +251,7 @@ export function createClientBundle(css) {
         if (compatibility.ok) {
           ensureStyle();
           installSidebarGestures();
+          installRefresh();
           publish('compatible', { compatibility });
         } else {
           removeSidebarGestures();
@@ -296,6 +262,7 @@ export function createClientBundle(css) {
     }
 
     exports.apply = apply;
+    exports.configure = configure;
     return module.exports;
   }
 });

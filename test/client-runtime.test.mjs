@@ -77,6 +77,7 @@ test('client shows the bottom refresh prompt and reloads after an armed pull', a
   });
   const exports = registrations[0].factory(() => {});
   exports.apply();
+  exports.configure({ pullRefresh: { animation: 'text' } });
 
   conversation.scrollTop = 600;
   conversation.clientHeight = 400;
@@ -88,16 +89,27 @@ test('client shows the bottom refresh prompt and reloads after an armed pull', a
 
   document.dispatch('touchstart', event(500));
   document.dispatch('touchmove', event(465));
-  const indicator = frame.appended[0];
-  assert.equal(indicator?.textContent, '松开手后刷新页面');
+  const indicator = document.body.appended[0];
+  assert.equal(indicator?.textContent, '继续上拉');
   assert.equal(indicator?.dataset.state, 'pulling');
   assert.equal(location.reloads, 0);
 
-  document.dispatch('touchmove', event(420));
-  assert.equal(indicator?.dataset.state, 'armed');
+  document.dispatch('touchmove', event(392));
+  assert.equal(indicator?.dataset.state, 'pulling');
+  document.dispatch('touchend', { touches: [] });
+  assert.equal(location.reloads, 0);
+
+  document.dispatch('touchstart', event(500));
+  document.dispatch('touchmove', event(285));
+  const secondIndicator = document.body.appended[0];
+  assert.equal(secondIndicator?.dataset.state, 'pulling');
+  document.dispatch('touchmove', event(284));
+  assert.equal(secondIndicator?.dataset.state, 'armed');
   document.dispatch('touchend', { touches: [] });
   assert.equal(location.reloads, 1);
-  assert.equal(indicator?.dataset.state, 'hidden');
+  assert.equal(secondIndicator.parentNode, document.body);
+  assert.equal(secondIndicator.textContent, '正在刷新…');
+  assert.equal(secondIndicator.dataset.state, 'refreshing');
 });
 
 test('client retracts the bottom refresh prompt when the pull returns to the bottom', async () => {
@@ -107,6 +119,7 @@ test('client retracts the bottom refresh prompt when the pull returns to the bot
   });
   const exports = registrations[0].factory(() => {});
   exports.apply();
+  exports.configure({ pullRefresh: { animation: 'text' } });
 
   conversation.scrollTop = 600;
   conversation.clientHeight = 400;
@@ -118,7 +131,7 @@ test('client retracts the bottom refresh prompt when the pull returns to the bot
 
   document.dispatch('touchstart', event(500));
   document.dispatch('touchmove', event(465));
-  const indicator = frame.appended[0];
+  const indicator = document.body.appended[0];
   assert.equal(indicator?.dataset.state, 'pulling');
   document.dispatch('touchmove', event(500));
   assert.equal(indicator?.dataset.state, 'hidden');
@@ -185,6 +198,30 @@ test('client keeps PWA sidebar gestures out of browser tabs and unrelated touche
   assert.equal(pwa.toggle.clicks, 0);
 });
 
+test('configure cancels an armed refresh without disabling sidebar and can reenable refresh', async () => {
+  const { document, conversation, conversationContent, toggle, location, registrations } = await loadBundle({ compatible: true, pwaMode: 'standalone' });
+  const client = registrations[0].factory(() => {});
+  client.apply();
+  client.configure({ pullRefresh: { animation: 'text' } });
+  conversation.scrollTop = 600; conversation.clientHeight = 400; conversation.scrollHeight = 1000;
+  const event = (x, y) => ({ touches: [{ clientX: x, clientY: y }], target: conversationContent });
+  document.dispatch('touchstart', event(180, 500));
+  document.dispatch('touchmove', event(180, 260));
+  client.configure({ pullRefresh: { enabled: false } });
+  assert.equal(document.body.appended.length, 0);
+  document.dispatch('touchend', { touches: [] });
+  assert.equal(location.reloads, 0);
+  document.dispatch('touchstart', event(16, 100));
+  document.dispatch('touchmove', event(64, 100));
+  document.dispatch('touchend', { touches: [] });
+  assert.equal(toggle.clicks, 1);
+  client.configure({ pullRefresh: { enabled: true } });
+  document.dispatch('touchstart', event(180, 500));
+  document.dispatch('touchmove', event(180, 260));
+  document.dispatch('touchend', { touches: [] });
+  assert.equal(location.reloads, 1);
+  assert.throws(() => client.configure({ pullRefresh: { animation: 'unknown' } }), /Invalid/);
+});
 async function loadBundle({ compatible = false, pwaMode = 'none' } = {}) {
   const bundle = await readFile(new URL('../dist/client.js', import.meta.url), 'utf8');
   const fake = createFakeDocument(compatible);
@@ -192,8 +229,11 @@ async function loadBundle({ compatible = false, pwaMode = 'none' } = {}) {
   const context = {
     document: fake.document,
     location: fake.location,
+    requestAnimationFrame(callback) { callback(); },
     clearTimeout() {},
-    setTimeout() { return 1; },
+    setInterval() { return 1; },
+    clearInterval() {},
+    setTimeout(callback, delay) { if (delay === 3000) callback(); return 1; },
     window: {
       __ModuleLoader__: {
         load(record) {
@@ -222,7 +262,7 @@ function createFakeDocument(compatible) {
     ])
     : new Set();
   const listeners = new Map();
-  const body = {};
+  const body = { appended: [], appendChild(node) { node.parentNode = this; this.appended.push(node); } };
   const sidebarContent = {};
   const conversationContent = {};
   const toggle = {
@@ -307,6 +347,8 @@ function createFakeDocument(compatible) {
             this.values[name] = value;
           }
         },
+        appended: [],
+        appendChild(node) { node.parentNode = this; this.appended.push(node); },
         parentNode: null,
         textContent: '',
         setAttribute(name, value) {
@@ -333,21 +375,25 @@ function createFakeDocument(compatible) {
       return [];
     },
     addEventListener(type, listener, options) {
-      listeners.set(type, { listener, passive: options?.passive === true });
+      const entries = listeners.get(type) ?? [];
+      if (!entries.some(entry => entry.listener === listener)) entries.push({ listener, passive: options?.passive === true });
+      listeners.set(type, entries);
     },
     removeEventListener(type, listener) {
-      if (listeners.get(type)?.listener === listener) listeners.delete(type);
+      const entries = (listeners.get(type) ?? []).filter(entry => entry.listener !== listener);
+      if (entries.length) listeners.set(type, entries); else listeners.delete(type);
     },
     dispatch(type, event) {
-      listeners.get(type)?.listener(event);
+      for (const entry of [...(listeners.get(type) ?? [])]) entry.listener(event);
     },
     listenerTypes() {
       return [...listeners.keys()].sort();
     },
     listenersArePassive() {
-      return [...listeners.values()].every(({ passive }) => passive);
+      return [...listeners.values()].flat().every(({ passive }) => passive);
     }
   };
+  body.ownerDocument = document;
   const location = {
     reloads: 0,
     reload() {
@@ -366,3 +412,26 @@ class FakeMutationObserver {
 
   disconnect() {}
 }
+
+
+test('refresh feedback precedes navigation and disabling cancels scheduled reload', async () => {
+  for (const disable of [false, true]) {
+    const h = await loadBundle({ compatible: true, pwaMode: 'ios' });
+    const frames = [];
+    h.context.requestAnimationFrame = callback => frames.push(callback);
+    const client = h.registrations[0].factory(() => {});
+    client.apply(); client.configure({ pullRefresh: { animation: 'text' } });
+    h.conversation.scrollTop = 600; h.conversation.clientHeight = 400; h.conversation.scrollHeight = 1000;
+    const event = y => ({ touches: [{ clientX: 180, clientY: y }], target: h.conversationContent });
+    h.document.dispatch('touchstart', event(500));
+    h.document.dispatch('touchmove', event(200));
+    h.document.dispatch('touchend', { touches: [] });
+    assert.equal(h.document.body.appended[0].textContent, '正在刷新…');
+    assert.equal(h.location.reloads, 0);
+    frames.shift()(); // First frame leaves time for feedback to paint.
+    assert.equal(h.location.reloads, 0);
+    if (disable) client.configure({ pullRefresh: { enabled: false } });
+    frames.shift()();
+    assert.equal(h.location.reloads, disable ? 0 : 1);
+  }
+});
