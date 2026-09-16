@@ -1,0 +1,71 @@
+/*
+ * DSH mobile shell adaptation.
+ *
+ * The selectors intentionally use stable data attributes where DSH exposes
+ * them, and semantic CSS-module suffixes only as a compatibility fallback.
+ * Generated build-specific selector prefixes are intentionally not used.
+ *
+ * Desktop is untouched: every declaration below is scoped to the narrow
+ * viewport media query. The JavaScript entry only owns style injection and
+ * compatibility reporting; layout remains CSS-owned.
+ */
+
+@media (max-width: 1023px) {
+  [class$="_frame"] {
+    grid-template-columns: 0 minmax(0, 1fr) 0 !important;
+  }
+
+  [class$="_centerCol"] {
+    grid-column: 2;
+  }
+
+  [class$="_detailsCol"] {
+    grid-column: 3;
+  }
+
+  [class$="_handle"] {
+    display: none !important;
+  }
+
+  [class$="_sidebarCol"] {
+    position: absolute;
+    z-index: 40;
+    inset-block: 0;
+    inset-inline-start: 0;
+    width: min(86vw, 420px) !important;
+    overflow: visible;
+    box-shadow: 12px 0 32px rgb(15 23 42 / 18%);
+  }
+
+  [class$="_frame"][data-sidebar-collapsed] [class$="_sidebarCol"] {
+    inset-block-start: 8px;
+    inset-block-end: auto;
+    width: 56px !important;
+    height: 56px;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 8px 24px rgb(15 23 42 / 22%);
+  }
+
+  [class$="_frame"]:not([data-sidebar-collapsed])::after {
+    content: "";
+    position: absolute;
+    z-index: 35;
+    inset: 0;
+    inset-inline-start: min(86vw, 420px);
+    background: rgb(15 23 42 / 12%);
+    pointer-events: none;
+  }
+
+  [class$="_frame"] [data-conversation-scroll] {
+    --dsh-composer-side-clearance: 0px;
+  }
+
+  [class$="_frame"] [data-composer-seat] {
+    padding-inline: 12px;
+  }
+
+  [class$="_frame"] [data-composer-card] {
+    max-inline-size: 100%;
+  }
+}

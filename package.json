@@ -1,0 +1,40 @@
+{
+  "name": "dsh-mobile-ux",
+  "version": "0.1.0",
+  "description": "CSS-first mobile shell adaptation for DeepSeek Harness web profiles.",
+  "type": "module",
+  "main": "./dist/index.mjs",
+  "exports": {
+    ".": "./dist/index.mjs",
+    "./client": "./dist/client.js",
+    "./package.json": "./package.json",
+    "./styles/mobile.css": "./styles/mobile.css"
+  },
+  "bin": {
+    "dsh-mobile-ux": "./bin/dsh-mobile-ux.mjs"
+  },
+  "files": [
+    "bin/",
+    "dist/",
+    "src/",
+    "scripts/",
+    "styles/",
+    "targets/",
+    "README.md",
+    "docs/",
+    "package.json"
+  ],
+  "dsh": {
+    "client": {
+      "inject": [],
+      "immediately": true,
+      "platform": "web"
+    }
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "check": "node scripts/check.mjs",
+    "test": "npm run build && node --test test/*.test.mjs",
+    "prepack": "npm run build && npm run check"
+  }
+}
