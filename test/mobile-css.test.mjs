@@ -16,6 +16,9 @@ test('mobile CSS keeps desktop outside the narrow media query and uses semantic 
   assert.match(css, /\[class\$="_sidebarCol"\]/);
   assert.match(css, /\[class\$="_sessionLogButton"\] span/);
   assert.match(css, /\[class\$="_sessionLogButton"\] svg/);
+  assert.match(css, /clip-path: inset\(50%\)/);
+  assert.match(css, /inline-size: 1px/);
+  assert.doesNotMatch(css, /\[class\$="_sessionLogButton"\] span \{\s*display: none/);
   assert.match(css, /\[data-sidebar-collapsed\]/);
   assert.match(css, /inset-inline-start: 8px/);
   assert.match(css, /\[class\$="_header"\]/);
@@ -29,6 +32,7 @@ test('mobile CSS keeps desktop outside the narrow media query and uses semantic 
   assert.match(css, /padding: 12px 12px 76px/);
   assert.match(css, /\[data-composer-seat\]/);
   assert.match(css, /padding-block-end: max\(8px, var\(--dsh-mobile-safe-bottom\)\)/);
+  assert.equal((css.match(/padding-block-end:[^;]*var\(--dsh-mobile-safe-bottom\)/g) ?? []).length, 1);
   assert.match(css, /max-block-size: calc\(var\(--dsh-mobile-viewport-height\) - var\(--dsh-mobile-safe-bottom\)\)/);
   assert.doesNotMatch(css, /\.[A-Za-z0-9]{5,12}_[A-Za-z0-9_-]+/);
   assert.doesNotMatch(css, /@media \(min-width/);
