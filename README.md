@@ -16,6 +16,7 @@
 - 窄屏下完全隐藏 Session log 下载按钮，避免它占用移动 header 空间。
 - header/title/tabs 在窄屏保持单行标题区域与可横向滚动的 tabs；composer 使用 `dvh` 与 safe-area bottom，避免键盘和 Safari 地址栏遮挡发送按钮。
 - 在已安装的 PWA 中，收起 sidebar 时从最左缘向右滑会触发现有 toggle，展开后从 sidebar 内向左滑会收起；插件不调用 `preventDefault()`，因此 iOS 可能同时执行同源历史返回，这是已接受的产品边界。
+- 在已安装的 PWA 中，滚动到 conversation 底部后继续向上拖动，会让纯文字提示“松开手后刷新页面”从屏幕底部外侧跟随手势进入；达到阈值并松手才刷新，手势回退到底部时提示会退回屏幕外。输入框、按钮和链接区域不启动该手势。
 - 安装写入 home 级 `cordis.patch.yml`，并在 `profiles/node_modules/dsh-mobile-ux` 建立指向本插件目录的链接。兼容性失败时不会写 patch 或链接。
 
 ## 构建与检查
@@ -72,3 +73,4 @@ home-level patch 是持久边界：部分 launcher 会刷新 `profiles/<profile>
 5. 在官方 DSH 或兼容构建的 launcher 中启动一次，确认 home patch 被加载；不能以 profile patch 的暂时存在代替这个验收。
 6. 用缺失或变更的 layout/conversation artifact 运行安装，确认 fail closed 且没有新增 patch/link。
 7. 在 iOS PWA 中测试最左缘右滑开栏，以及展开 sidebar 后从 sidebar 内向左滑收起；同源历史返回可能与开栏同时发生，这是已接受的边界。
+8. 在 iOS PWA 中滚动到会话底部继续向上拖动，确认提示出现、回拖时提示收回，达到阈值松手后页面刷新；在 composer 输入框和按钮上拖动不触发刷新。

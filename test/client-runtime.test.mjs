@@ -70,6 +70,90 @@ test('client binds PWA sidebar swipes to the existing toggle', async () => {
   assert.equal(toggle.clicks, 2);
 });
 
+test('client shows the bottom refresh prompt and reloads after an armed pull', async () => {
+  const { document, frame, conversation, conversationContent, location, registrations } = await loadBundle({
+    compatible: true,
+    pwaMode: 'standalone'
+  });
+  const exports = registrations[0].factory(() => {});
+  exports.apply();
+
+  conversation.scrollTop = 600;
+  conversation.clientHeight = 400;
+  conversation.scrollHeight = 1000;
+  const event = (y) => ({
+    touches: [{ clientX: 180, clientY: y }],
+    target: conversationContent
+  });
+
+  document.dispatch('touchstart', event(500));
+  document.dispatch('touchmove', event(465));
+  const indicator = frame.appended[0];
+  assert.equal(indicator?.textContent, '松开手后刷新页面');
+  assert.equal(indicator?.dataset.state, 'pulling');
+  assert.equal(location.reloads, 0);
+
+  document.dispatch('touchmove', event(420));
+  assert.equal(indicator?.dataset.state, 'armed');
+  document.dispatch('touchend', { touches: [] });
+  assert.equal(location.reloads, 1);
+  assert.equal(indicator?.dataset.state, 'hidden');
+});
+
+test('client retracts the bottom refresh prompt when the pull returns to the bottom', async () => {
+  const { document, frame, conversation, conversationContent, location, registrations } = await loadBundle({
+    compatible: true,
+    pwaMode: 'ios'
+  });
+  const exports = registrations[0].factory(() => {});
+  exports.apply();
+
+  conversation.scrollTop = 600;
+  conversation.clientHeight = 400;
+  conversation.scrollHeight = 1000;
+  const event = (y) => ({
+    touches: [{ clientX: 180, clientY: y }],
+    target: conversationContent
+  });
+
+  document.dispatch('touchstart', event(500));
+  document.dispatch('touchmove', event(465));
+  const indicator = frame.appended[0];
+  assert.equal(indicator?.dataset.state, 'pulling');
+  document.dispatch('touchmove', event(500));
+  assert.equal(indicator?.dataset.state, 'hidden');
+  document.dispatch('touchend', { touches: [] });
+  assert.equal(location.reloads, 0);
+});
+
+test('client does not start bottom refresh away from the bottom or inside the composer', async () => {
+  const { document, frame, conversation, conversationContent, composer, location, registrations } = await loadBundle({
+    compatible: true,
+    pwaMode: 'standalone'
+  });
+  const exports = registrations[0].factory(() => {});
+  exports.apply();
+  const event = (target) => ({
+    touches: [{ clientX: 180, clientY: 500 }],
+    target
+  });
+
+  conversation.scrollTop = 500;
+  conversation.clientHeight = 400;
+  conversation.scrollHeight = 1000;
+  document.dispatch('touchstart', event(conversationContent));
+  document.dispatch('touchmove', { touches: [{ clientX: 180, clientY: 420 }], target: conversationContent });
+  document.dispatch('touchend', { touches: [] });
+
+  conversation.scrollTop = 600;
+  document.dispatch('touchstart', event(composer));
+  document.dispatch('touchmove', { touches: [{ clientX: 180, clientY: 420 }], target: composer });
+  document.dispatch('touchend', { touches: [] });
+
+  assert.equal(frame.appended.length, 0);
+  assert.equal(location.reloads, 0);
+});
+
 test('client keeps PWA sidebar gestures out of browser tabs and unrelated touches', async () => {
   const browserTab = await loadBundle({ compatible: true });
   const browserExports = browserTab.registrations[0].factory(() => {});
@@ -107,6 +191,7 @@ async function loadBundle({ compatible = false, pwaMode = 'none' } = {}) {
   const registrations = [];
   const context = {
     document: fake.document,
+    location: fake.location,
     clearTimeout() {},
     setTimeout() { return 1; },
     window: {
@@ -139,6 +224,7 @@ function createFakeDocument(compatible) {
   const listeners = new Map();
   const body = {};
   const sidebarContent = {};
+  const conversationContent = {};
   const toggle = {
     clicks: 0,
     click() {
@@ -156,8 +242,40 @@ function createFakeDocument(compatible) {
       return { left: 0, right: 280 };
     }
   };
+  const composer = {
+    appended: [],
+    appendChild(node) {
+      node.parentNode = this;
+      this.appended.push(node);
+    },
+    querySelector() {
+      return null;
+    },
+    closest(selector) {
+      return selector.includes('[data-composer-seat]') ? this : null;
+    },
+    contains(node) {
+      return this.appended.includes(node);
+    }
+  };
+  const conversation = {
+    scrollTop: 0,
+    clientHeight: 0,
+    scrollHeight: 0,
+    querySelector(selector) {
+      return selector === '[data-composer-seat]' ? composer : null;
+    },
+    contains(node) {
+      return node === conversationContent || node === composer || composer.contains(node);
+    }
+  };
   const frame = {
     collapsed: true,
+    appended: [],
+    appendChild(node) {
+      node.parentNode = this;
+      this.appended.push(node);
+    },
     hasAttribute(name) {
       return name === 'data-sidebar-collapsed' && this.collapsed;
     },
@@ -182,11 +300,25 @@ function createFakeDocument(compatible) {
     createElement() {
       return {
         dataset: {},
+        attributes: {},
+        style: {
+          values: {},
+          setProperty(name, value) {
+            this.values[name] = value;
+          }
+        },
         parentNode: null,
         textContent: '',
+        setAttribute(name, value) {
+          this.attributes[name] = value;
+        },
         remove() {
           const index = head.appended.indexOf(this);
           if (index >= 0) head.appended.splice(index, 1);
+          const parent = this.parentNode;
+          const parentIndex = parent?.appended?.indexOf(this) ?? -1;
+          if (parentIndex >= 0) parent.appended.splice(parentIndex, 1);
+          this.parentNode = null;
         }
       };
     },
@@ -194,6 +326,7 @@ function createFakeDocument(compatible) {
       if (!selectors.has(selector)) return null;
       if (selector === '[class$="_frame"]') return frame;
       if (selector === '[class$="_sidebarCol"]') return sidebar;
+      if (selector === '[data-conversation-scroll]') return conversation;
       return {};
     },
     querySelectorAll(selector) {
@@ -215,7 +348,13 @@ function createFakeDocument(compatible) {
       return [...listeners.values()].every(({ passive }) => passive);
     }
   };
-  return { document, frame, sidebarContent, toggle };
+  const location = {
+    reloads: 0,
+    reload() {
+      this.reloads += 1;
+    }
+  };
+  return { document, frame, sidebarContent, toggle, conversation, conversationContent, composer, location };
 }
 
 class FakeMutationObserver {
