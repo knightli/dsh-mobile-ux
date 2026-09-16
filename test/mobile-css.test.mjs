@@ -14,11 +14,7 @@ test('mobile CSS keeps desktop outside the narrow media query and uses semantic 
   assert.match(css, /grid-template-columns: 0 minmax\(0, 1fr\) 0/);
   assert.match(css, /\[class\$="_frame"\]/);
   assert.match(css, /\[class\$="_sidebarCol"\]/);
-  assert.match(css, /\[class\$="_sessionLogButton"\] span/);
-  assert.match(css, /\[class\$="_sessionLogButton"\] svg/);
-  assert.match(css, /clip-path: inset\(50%\)/);
-  assert.match(css, /inline-size: 1px/);
-  assert.doesNotMatch(css, /\[class\$="_sessionLogButton"\] span \{\s*display: none/);
+  assert.match(css, /\[class\$="_sessionLogButton"\]\s*\{\s*display: none !important;/);
   assert.match(css, /\[data-sidebar-collapsed\]/);
   assert.match(css, /inset-inline-start: 8px/);
   assert.match(css, /\[class\$="_header"\]/);
@@ -32,6 +28,8 @@ test('mobile CSS keeps desktop outside the narrow media query and uses semantic 
   assert.match(css, /\[class\*="_iconButton"\]/);
   assert.match(css, /\[class\*="_toggle"\]/);
   assert.match(css, /\[class\*="_railFish"\]/);
+  assert.match(css, /\[class\$="_sidebarCol"\] \[class\*="_toggle"\] ~ \[role="tooltip"\]/);
+  assert.match(css, /\[role="tooltip"\]\s*\{\s*display: none !important;/);
   assert.match(css, /width: 36px !important/);
   assert.match(css, /padding-inline-start: 56px/);
   assert.match(css, /\[data-conversation-scroll\]/);

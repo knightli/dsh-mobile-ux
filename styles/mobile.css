@@ -29,28 +29,7 @@
   }
 
   [class$="_sessionLogButton"] {
-    min-width: 32px !important;
-    width: 32px;
-    height: 32px;
-    gap: 0;
-    padding: 6px !important;
-  }
-
-  [class$="_sessionLogButton"] span {
-    position: absolute;
-    inline-size: 1px;
-    block-size: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0 0 0 0);
-    clip-path: inset(50%);
-    white-space: nowrap;
-    border: 0;
-  }
-
-  [class$="_sessionLogButton"] svg {
-    flex: none;
+    display: none !important;
   }
 
   [class$="_handle"] {
@@ -109,6 +88,11 @@
   [class$="_frame"][data-sidebar-collapsed] [class$="_sidebarCol"] [class*="_railFish"] {
     width: 24px;
     height: 24px;
+  }
+
+  [class$="_sidebarCol"] [class*="_toggle"] ~ [role="tooltip"] {
+    display: none !important;
+    pointer-events: none;
   }
 
   [class$="_frame"]:not([data-sidebar-collapsed])::after {

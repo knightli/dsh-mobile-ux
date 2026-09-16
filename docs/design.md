@@ -25,7 +25,8 @@ This implementation keeps those behaviors but changes the selector contract to s
 | Details column gets an independent mobile drawer | Exclude | The requested scope is the sidebar/main shell. Adding another state owner would turn a CSS adaptation into a UI feature. The narrow grid still reserves an explicit details track at column 3. |
 | Generated CSS-module selectors | Exclude | Hashes drift with builds and cannot be a compatibility contract. |
 | JavaScript layout manipulation | Exclude | CSS owns geometry; `client.js` only gates style injection on observed hooks. |
-| Session log text on narrow screens | Hide only the text span and keep the download SVG | The semantic button suffix remains the selector contract; runtime adds an accessible name only when the host did not provide one. |
+| Session log on narrow screens | Hide the whole download button | The semantic button suffix remains the selector contract, while the mobile shell keeps header space for navigation and title context. |
+| Sidebar toggle tooltip | Hide only a `role="tooltip"` sibling of the semantic sidebar toggle | The upstream Tooltip renders that bubble beside the toggle; scoping the rule to the sidebar prevents unrelated business tooltips from disappearing. |
 | Header/title/tabs placement | Keep the title row single-line and let tabs scroll horizontally | The generic shell contract does not infer or position product-specific status widgets. |
 | Keyboard/address-bar viewport changes | Use `100dvh` and `env(safe-area-inset-bottom, 0px)` | The composer seat owns the bottom safe-area padding; the conversation scroll body only subtracts the inset from its height cap, avoiding double bottom whitespace without adding a `visualViewport` state owner. |
 

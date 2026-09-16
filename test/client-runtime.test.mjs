@@ -15,7 +15,7 @@ test('generated client bundle registers a factory whose return value exports app
 });
 
 test('client apply injects one compatible style for repeated calls', async () => {
-  const { context, document, registrations, sessionLogButton } = await loadBundle({ compatible: true, sessionLog: true });
+  const { context, document, registrations } = await loadBundle({ compatible: true });
   const exports = registrations[0].factory(() => {});
 
   exports.apply();
@@ -27,8 +27,6 @@ test('client apply injects one compatible style for repeated calls', async () =>
   assert.equal(context.__DSH_MOBILE_UX__.compatibility.ok, true);
   assert.equal(context.__DSH_MOBILE_UX__.compatibility.layout, true);
   assert.equal(context.__DSH_MOBILE_UX__.compatibility.conversation, true);
-  assert.equal(sessionLogButton.getAttribute('aria-label'), 'Session log');
-  assert.equal(sessionLogButton.getAttribute('title'), 'Session log');
 });
 
 test('client apply fails closed without compatible hooks', async () => {
@@ -41,36 +39,14 @@ test('client apply fails closed without compatible hooks', async () => {
   assert.equal(context.__DSH_MOBILE_UX__.state, 'incompatible');
 });
 
-test('client accessibility enhancement handles a late Session log mount and cleans up', async () => {
-  const { document, registrations, mutationObservers, timers } = await loadBundle({ compatible: true });
-  const exports = registrations[0].factory(() => {});
-
-  exports.apply();
-  const lateButton = document.addSessionLogButton();
-  assert.equal(mutationObservers.length, 1);
-  mutationObservers[0].callback([]);
-
-  assert.equal(lateButton.getAttribute('aria-label'), 'Session log');
-  assert.equal(lateButton.getAttribute('title'), 'Session log');
-  timers[0].callback();
-  assert.equal(mutationObservers[0].disconnected, true);
-});
-
-async function loadBundle({ compatible = false, sessionLog = false } = {}) {
+async function loadBundle({ compatible = false } = {}) {
   const bundle = await readFile(new URL('../dist/client.js', import.meta.url), 'utf8');
-  const { document, sessionLogButton } = createFakeDocument(compatible, sessionLog);
+  const { document } = createFakeDocument(compatible);
   const registrations = [];
-  const mutationObservers = [];
-  const timers = [];
   const context = {
     document,
-    clearTimeout(id) {
-      if (timers[id]) timers[id].cleared = true;
-    },
-    setTimeout(callback) {
-      timers.push({ callback, cleared: false });
-      return timers.length - 1;
-    },
+    clearTimeout() {},
+    setTimeout() { return 1; },
     window: {
       __ModuleLoader__: {
         load(record) {
@@ -79,19 +55,12 @@ async function loadBundle({ compatible = false, sessionLog = false } = {}) {
       }
     }
   };
-  if (compatible) {
-    context.MutationObserver = class extends FakeMutationObserver {
-      constructor(callback) {
-        super(callback);
-        mutationObservers.push(this);
-      }
-    };
-  }
+  if (compatible) context.MutationObserver = FakeMutationObserver;
   vm.runInNewContext(bundle, context);
-  return { context, document, registrations, sessionLogButton, mutationObservers, timers };
+  return { context, document, registrations };
 }
 
-function createFakeDocument(compatible, sessionLog) {
+function createFakeDocument(compatible) {
   const selectors = compatible
     ? new Set([
       '[class$="_frame"]',
@@ -111,7 +80,6 @@ function createFakeDocument(compatible, sessionLog) {
       return head.appended[0] ?? null;
     }
   };
-  const sessionLogButtons = sessionLog ? [createSessionLogButton()] : [];
   const document = {
     head,
     documentElement: {},
@@ -130,46 +98,18 @@ function createFakeDocument(compatible, sessionLog) {
       return selectors.has(selector) ? {} : null;
     },
     querySelectorAll(selector) {
-      return selector === '[class$="_sessionLogButton"]' ? sessionLogButtons : [];
+      return [];
     }
   };
-  return {
-    document: {
-      ...document,
-      addSessionLogButton() {
-        const button = createSessionLogButton();
-        sessionLogButtons.push(button);
-        return button;
-      }
-    },
-    sessionLogButton: sessionLogButtons[0] ?? null
-  };
-}
-
-function createSessionLogButton() {
-  return {
-    attributes: new Map(),
-    querySelector(selector) {
-      return selector === 'span' ? { textContent: 'Session log' } : null;
-    },
-    getAttribute(name) {
-      return this.attributes.get(name) ?? null;
-    },
-    setAttribute(name, value) {
-      this.attributes.set(name, value);
-    }
-  };
+  return { document };
 }
 
 class FakeMutationObserver {
   constructor(callback) {
     this.callback = callback;
-    this.disconnected = false;
   }
 
   observe() {}
 
-  disconnect() {
-    this.disconnected = true;
-  }
+  disconnect() {}
 }
