@@ -2,6 +2,12 @@
 
 一个独立、可维护的通用 DSH Web 移动端体验插件。它只调整窄视口下的 shell 布局，不参与 session、认证、权限、传输或业务状态管理。只要 DSH 构建保留下面的 web-profile 兼容契约，官方 DSH 及兼容构建都可以复用这个包。
 
+## 来源与许可证
+
+本项目的移动端体验实现参考了 [qingshanyuluo/dsh-mobile-ux](https://github.com/qingshanyuluo/dsh-mobile-ux)。
+
+本仓库同样以 MIT License 发布，完整许可文本见 [LICENSE](LICENSE)。
+
 ## 设计边界
 
 - `styles/mobile.css` 是行为核心：桌面端不添加任何规则；窄视口将三列布局收缩为 `0 / 1fr / 0`，把 sidebar 变成覆盖层，并保留折叠态的 36px 入口。
