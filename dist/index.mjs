@@ -11,5 +11,6 @@ export {
 } from './profile.mjs';
 
 // The host half is intentionally inert. The browser half is registered from
-// dist/client.js and owns only CSS injection plus compatibility reporting.
+// dist/client.js and owns CSS injection, compatibility reporting, and the
+// small PWA-only sidebar gesture binding.
 export function apply() {}
