@@ -30,6 +30,8 @@ npm run check
 
 `prepare` 会在 npm/pnpm 安装 Git 依赖时重新生成 `dist/`。DSH 的插件添加流程可能只是链接本地目录而不执行 npm lifecycle，因此不能只依赖 `prepare`；直接从 checkout 安装或调试时请先运行上面的构建命令。
 
+如果包管理器的脚本 allowlist 阻止 Git 依赖执行 `prepare`，应在明确允许该包构建脚本后再依赖 lifecycle；已跟踪的 `dist/` 仍提供 checkout 和打包安装所需的运行时兜底。
+
 ## 安装控制
 
 安装器只有一个通用 `dsh-web` 兼容契约。显式传入实际的 DSH home；省略时使用 `DSH_HOME` 或 `~/.dsh`。`--profile` 默认为 `web`，用于兼容保留相同目录布局但 profile 名称不同的构建。
