@@ -19,6 +19,17 @@ npm test
 
 `npm test` 会先构建，然后执行 CSS 契约、通用 web-profile artifact 契约、profile 持久化以及 `client.js` 的真实模块注册/执行测试。
 
+## 从 checkout 或 Git 依赖使用
+
+`dist/` 是可运行的发布产物，已随仓库保留；但从 checkout 使用前仍应显式执行：
+
+```powershell
+npm run build
+npm run check
+```
+
+`prepare` 会在 npm/pnpm 安装 Git 依赖时重新生成 `dist/`。DSH 的插件添加流程可能只是链接本地目录而不执行 npm lifecycle，因此不能只依赖 `prepare`；直接从 checkout 安装或调试时请先运行上面的构建命令。
+
 ## 安装控制
 
 安装器只有一个通用 `dsh-web` 兼容契约。显式传入实际的 DSH home；省略时使用 `DSH_HOME` 或 `~/.dsh`。`--profile` 默认为 `web`，用于兼容保留相同目录布局但 profile 名称不同的构建。

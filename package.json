@@ -33,6 +33,7 @@
   },
   "scripts": {
     "build": "node scripts/build.mjs",
+    "prepare": "node scripts/build.mjs",
     "check": "node scripts/check.mjs",
     "test": "npm run build && node --test test/*.test.mjs",
     "prepack": "npm run build && npm run check"
