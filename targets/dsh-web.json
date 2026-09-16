@@ -37,7 +37,8 @@
         "tokens": [
           "data-conversation-scroll",
           "data-composer-seat",
-          "data-composer-card"
+          "data-composer-card",
+          "_scroll"
         ]
       }
     ]

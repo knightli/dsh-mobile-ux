@@ -40,6 +40,7 @@
   [class$="_frame"][data-sidebar-collapsed] [class$="_sidebarCol"] {
     inset-block-start: 8px;
     inset-block-end: auto;
+    inset-inline-start: 8px;
     width: 56px !important;
     height: 56px;
     border-radius: 16px;
@@ -67,5 +68,11 @@
 
   [class$="_frame"] [data-composer-card] {
     max-inline-size: 100%;
+  }
+
+  /* The conversation viewport also contains the composer; leave its input
+   * scroll wrapper alone while tightening the message-list scroll inner. */
+  [class$="_frame"] [data-conversation-scroll] [class$="_scroll"]:not([data-composer-seat] [class$="_scroll"]) {
+    padding: 12px 12px 76px;
   }
 }

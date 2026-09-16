@@ -10,7 +10,10 @@ test('mobile CSS keeps desktop outside the narrow media query and uses semantic 
   assert.match(css, /\[class\$="_frame"\]/);
   assert.match(css, /\[class\$="_sidebarCol"\]/);
   assert.match(css, /\[data-sidebar-collapsed\]/);
+  assert.match(css, /inset-inline-start: 8px/);
   assert.match(css, /\[data-conversation-scroll\]/);
+  assert.match(css, /\[data-conversation-scroll\] \[class\$="_scroll"\]/);
+  assert.match(css, /padding: 12px 12px 76px/);
   assert.match(css, /\[data-composer-seat\]/);
   assert.doesNotMatch(css, /\.[A-Za-z0-9]{5,12}_[A-Za-z0-9_-]+/);
   assert.doesNotMatch(css, /@media \(min-width/);
